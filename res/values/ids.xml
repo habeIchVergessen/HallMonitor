@@ -6,4 +6,6 @@
     <item type="id" name="color_panel_new" />
     <item type="id" name="preference_preview_color_panel" />
     <item type="id" name="dialog_color_picker_extra_layout_landscape" />
+
+    <item type="id" name="preferences_phone" />
 </resources>

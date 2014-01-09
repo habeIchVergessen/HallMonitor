@@ -15,12 +15,23 @@
 package org.durka.hallmonitor;
 
 import android.app.Activity;
+import android.app.FragmentManager;
 import android.content.Intent;
 import android.os.Bundle;
+import android.preference.Preference;
+import android.preference.PreferenceActivity;
+import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
+import android.preference.PreferenceScreen;
+import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 
-public class Configuration extends Activity {
+import java.lang.reflect.Constructor;
+import java.util.List;
+
+public class Configuration extends PreferenceActivity {
+    private final String LOG_TAG = "Configuration";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -28,9 +39,14 @@ public class Configuration extends Activity {
 		
         Functions.configurationActivity = this;
         
-		setContentView(R.layout.activity_configuration);
-		
-		PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+        PreferenceFragment preferenceFragment = new PreferenceFragmentLoader();
+
+        // add extra resource to load xml
+        Bundle arguments = new Bundle(1);
+        arguments.putCharSequence("resource", "preferences");
+        preferenceFragment.setArguments(arguments);
+
+        getFragmentManager().beginTransaction().replace(android.R.id.content, preferenceFragment).commit();
 	}
 
 	@Override
@@ -45,4 +61,60 @@ public class Configuration extends Activity {
 		Functions.Events.activity_result(this, request, result, data);
 	}
 
+    @Override
+    public boolean onPreferenceStartFragment(PreferenceFragment caller, Preference preference) {
+        try {
+            // create new instance of class
+            Class<?> c = Class.forName(preference.getFragment());
+            Constructor<?> cons = c.getConstructor();
+            Object object = cons.newInstance();
+
+            // add preference fragment
+            if (object instanceof PreferenceFragment) {
+                PreferenceFragment preferenceFragment = (PreferenceFragment)object;
+                preferenceFragment.setArguments(preference.getExtras());
+
+                getFragmentManager().beginTransaction().replace(android.R.id.content, preferenceFragment).addToBackStack((String) preference.getTitle()).commit();
+                getFragmentManager().executePendingTransactions();
+
+                // update action bar
+                updateHeaderTitle(preference.getTitle());
+            } else
+                Log.d(LOG_TAG, "onPreferenceStartFragment: given class is not a PreferenceFragment");
+        } catch (Exception e) {
+            Log.d(LOG_TAG, "onPreferenceStartFragment: exception occurred! " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            // Respond to the action bar's Up/Home button
+            case android.R.id.home:
+                onBackPressed();
+                return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onBackPressed() {
+        CharSequence title = getTitle();
+        int idx;
+        if ((idx = getFragmentManager().getBackStackEntryCount()) > 0) {
+            title = getFragmentManager().getBackStackEntryAt(idx - 1).getName();
+        }
+
+        super.onBackPressed();
+
+        updateHeaderTitle(title);
+    }
+
+    private void updateHeaderTitle(CharSequence title) {
+        getActionBar().setTitle(title);
+        getActionBar().setDisplayHomeAsUpEnabled((getFragmentManager().getBackStackEntryCount() > 0));
+    }
 }

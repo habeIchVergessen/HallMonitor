@@ -281,7 +281,7 @@ public class DefaultActivity extends Activity {
         spanString.setSpan(new RelativeSizeSpan(0.8f), 6, spanString.length(), 0);
         defaultTextClock.setFormat24Hour(spanString);
 
-        // showPhoneWidget (overtake control if phone state in ringing or offhook)
+        // showPhoneWidget (overtake control if phone state is ringing or offhook)
         initPhoneWidget();
     }
 

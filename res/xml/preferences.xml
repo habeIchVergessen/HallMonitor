@@ -17,7 +17,7 @@
 -->
 
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-                  xmlns:robobunny="http://robobunny.com" >
+    xmlns:app="http://robobunny.com" >
 
     <CheckBoxPreference
         android:key="pref_enabled"
@@ -91,35 +91,16 @@
         android:summary="@string/pref_alarm_controls_summary"
         android:defaultValue="false" />
 
-    <PreferenceScreen
-        android:key="pref_phone_screen"
+    <org.durka.hallmonitor.PreferenceSwitchable
+        android:key="pref_phone_controls_user"
         android:title="@string/pref_phone_screen"
         android:summary="@string/pref_phone_screen_summary"
-        android:enabled="false">
-        <SwitchPreference
-            android:key="pref_phone_controls"
-            android:title="@string/pref_phone_controls"
-            android:text="@string/pref_phone_controls"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="pref_phone_controls_tts"
-            android:title="@string/pref_phone_controls_tts"
-            android:summary="@string/pref_phone_controls_tts_summary"
-            android:defaultValue="false" />
-        <ListPreference
-            android:key="pref_phone_controls_tts_delay"
-            android:title="@string/pref_phone_controls_tts_delay"
-            android:summary="@string/pref_phone_controls_tts_delay_summary"
-            android:entries="@array/ttsDelayNames"
-            android:entryValues="@array/ttsDelayValues"
-            android:defaultValue="500"
-            android:selectable="true"/>
-        <CheckBoxPreference
-            android:key="pref_phone_controls_speaker"
-            android:title="@string/pref_phone_controls_speaker"
-            android:summary="@string/pref_phone_controls_speaker_summary"
-            android:defaultValue="false" />
-    </PreferenceScreen>
+        android:fragment="org.durka.hallmonitor.PreferenceFragmentLoader"
+        android:defaultValue="false">
+        <extra
+            android:name="resource"
+            android:value="preferences_phone" />
+    </org.durka.hallmonitor.PreferenceSwitchable>
 
     <Preference
         android:title=""

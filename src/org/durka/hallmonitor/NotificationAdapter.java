@@ -80,7 +80,7 @@ public class NotificationAdapter extends BaseAdapter {
 		return view;
 	}
 
-    public boolean isAirPlaneMode() {
+    private boolean isAirPlaneMode() {
         return Settings.Global.getInt(that.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, 0) != 0;
     }
 
