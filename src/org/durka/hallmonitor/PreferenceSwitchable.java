@@ -35,15 +35,13 @@ public class PreferenceSwitchable extends Preference {
     protected View onCreateView(ViewGroup parent) {
         Log.d(LOG_TAG, "onCreateView: " + getKey());
 
-//        LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-//        View view = inflater.inflate(R.layout.preference_switchable_layout, parent, false);
-//
-//        mTitle = (TextView)view.findViewById(android.R.id.title);
-//        mSummary = (TextView)view.findViewById(android.R.id.summary);
-//        mIcon = (ImageView)view.findViewById(android.R.id.icon);
-//        mSwitch = (Switch)view.findViewById(R.id.prefEnableSwitch);
-//
-        View view = super.getView(null, parent);
+        LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View view = inflater.inflate(R.layout.preference_switchable_layout, parent, false);
+
+        mTitle = (TextView)view.findViewById(android.R.id.title);
+        mSummary = (TextView)view.findViewById(android.R.id.summary);
+        mIcon = (ImageView)view.findViewById(android.R.id.icon);
+        mSwitch = (Switch)view.findViewById(R.id.prefEnableSwitch);
 
         mSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
