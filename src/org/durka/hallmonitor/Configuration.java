@@ -14,9 +14,6 @@
  */
 package org.durka.hallmonitor;
 
-import android.app.Activity;
-import android.app.FragmentManager;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -24,8 +21,6 @@ import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
-import android.preference.PreferenceScreen;
-import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -35,8 +30,6 @@ import java.util.List;
 
 public class Configuration extends PreferenceActivity {
     private final String LOG_TAG = "Configuration";
-
-    private int mDefaultTextColor = Color.BLACK;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {

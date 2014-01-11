@@ -50,6 +50,7 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
 	// states for alarm and phone
 	public static boolean alarm_firing = false;
 	public static boolean phone_ringing = false;
+	public static boolean camera_up = false;
 
 	//audio manager to detect media state
 	private AudioManager audioManager;
@@ -77,6 +78,7 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
     private RelativeLayout defaultContent = null;
     private TextClock defaultTextClock = null;
     public ImageButton torchButton = null;
+    private ImageButton cameraButton = null;
 
     private PhoneWidget mPhoneWidget = null;
     
@@ -221,6 +223,7 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
 	    defaultContent = (RelativeLayout) findViewById(R.id.default_content);
 	    defaultTextClock = (TextClock) findViewById(R.id.default_text_clock);
 	    //torchButton = (ImageButton) findViewById(R.id.torchbutton);
+	    //cameraButton = (ImageButton) findViewById(R.id.camerabutton);
 
         // TextClock format
         SpannableString spanString = new SpannableString(getResources().getString(R.string.styled_24_hour_clock));
@@ -433,6 +436,21 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
     public void sendToggleTorch(View view) {
         Functions.Actions.toggle_torch(this);
     }
+
+    //fire up the camera
+    public void camera_start(View view) {
+        Functions.Actions.start_camera(this);
+    }
+
+    public void camera_capture(View view) {
+        Log.d("hm-cam", "say cheese");
+        ((CameraPreview)findViewById(R.id.default_camera)).capture();
+    }
+
+    public void camera_back(View view) {
+        Functions.Actions.end_camera(this);
+    }
+
 
     private void updateBatteryStatus() {
         if (findViewById(R.id.default_battery_picture) != null) {

@@ -58,6 +58,8 @@
     <string name="pref_phone_preview_input_message">enter a number</string>
     <string name="pref_flash_controls">Torch Control Enable</string>
     <string name="pref_flash_controls_summary">Whether to include a button to turn the torch on and off on the default screen</string>
+    <string name="pref_camera_controls">Camera Control Enable</string>
+    <string name="pref_camera_controls_summary">Whether to include a button to activate the camera on the default screen</string>
     <string name="pref_default_bgcolor">Background color</string>
     <string name="pref_default_bgcolor_summary">Background of the view you will see through the closed cover</string>
     <string name="pref_default_fgcolor">Foreground color</string>
@@ -74,13 +76,14 @@
     <string name="dummy_content">DUMMY\nCONTENT</string>
     <string name="snooze">SNOOZE</string>
     <string name="dismiss">DISMISS</string>
-    <string name="title_activity_call">CallActivity</string>
     <string name="caller_name">Caller Name</string>
     <string name="caller_number">+49 30 1234 5678</string>
     <string name="unknown_caller">unknown caller</string>
+    <!-- constants for intents -->
     <string name="ACTION_SEND_TO_SPEECH_RECEIVE">org.durka.hallmonitor.sendTextToSpeech</string>
     <string name="ACTION_STOP_TO_SPEECH_RECEIVE">org.durka.hallmonitor.stopTextToSpeech</string>
     <string name="ACTION_RESTART_DEFAULT_ACTIVITY">org.durka.hallmonitor.restartDefaultActivity</string>
+    <!-- clock format -->
     <string name="styled_12_hour_clock">hh:mm aaa\nEEEE, dd.MM.</string>
     <string name="styled_24_hour_clock">HH:mm\nEEEE, dd.MM.</string>
 

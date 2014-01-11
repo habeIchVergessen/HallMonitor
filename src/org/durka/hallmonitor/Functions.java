@@ -36,6 +36,8 @@ import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.Resources.NotFoundException;
 import android.os.Build;
 import android.database.Cursor;
 import android.net.Uri;
@@ -46,6 +48,7 @@ import android.provider.BaseColumns;
 import android.provider.ContactsContract;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.GridView;
 import android.widget.TextView;
@@ -74,8 +77,7 @@ public class Functions {
 	
 	public static DefaultActivity defaultActivity;
 	public static Configuration configurationActivity;
-
-
+	
 	/**
 	 * Provides methods for performing actions. (e.g. what to do when the cover is opened and closed etc.)
 	 */
@@ -199,8 +201,37 @@ public class Functions {
 				timerTaskScreenOff = null;
 			}
 		}
-		
-		/**
+
+        public static void setLockTimer(Context ctx) {
+            setLockTimer(ctx, PreferenceManager.getDefaultSharedPreferences(ctx).getInt("pref_delay", 10000));
+        }
+
+        public static void setLockTimer(Context ctx, int delay) {
+            timer.cancel();
+
+            timer = new Timer();
+
+            //need this to let us lock the phone
+            final DevicePolicyManager dpm = (DevicePolicyManager) ctx.getSystemService(Context.DEVICE_POLICY_SERVICE);
+
+            //using the handler is causing a problem, seems to lock up the app, hence replaced with a Timer
+            timer.schedule(timerTaskScreenOff = new TimerTask() {
+                //handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    Log.d("F.Act.close_cover", "Locking screen now.");
+                    dpm.lockNow();
+                    //FIXME Would it be better to turn the screen off rather than actually locking
+                    //presumably then it will auto lock as per phone configuration
+                    //I can't work out how to do it though!
+                }
+            }, delay);
+
+            Log.d("F.Act.set_lock_timer", "Delay set to: " + delay);
+        }
+
+
+        /**
 		 * Called from within the Functions.Event.Proximity method.
          * If we are running root enabled reverts the screen sensitivity.
          * Wakes the screen up.
@@ -388,6 +419,22 @@ public class Functions {
 	        	da.torchButton.setImageResource(R.drawable.ic_appwidget_torch_off);
 	        	close_cover(da);
 	        }
+		}
+		
+		public static void start_camera(DefaultActivity da) {
+			Functions.Actions.stopScreenOffTimer();
+			DefaultActivity.camera_up = true;
+			da.refreshDisplay();
+			da.findViewById(R.id.default_camera).setVisibility(View.VISIBLE);
+		}
+		
+		public static void end_camera(DefaultActivity da) { end_camera(da, true); }
+		
+		public static void end_camera(DefaultActivity da, boolean should_close) {
+			da.findViewById(R.id.default_camera).setVisibility(View.INVISIBLE);
+			DefaultActivity.camera_up = false;
+			da.refreshDisplay();
+			if (should_close) close_cover(da);
 		}
 		
 		public static void setup_notifications() {
@@ -629,6 +676,7 @@ public class Functions {
 			Log_d("phone", "call is over, cleaning up");
 			DefaultActivity.phone_ringing = false;
 			((TextView)defaultActivity.findViewById(R.id.call_from)).setText(ctx.getString(R.string.unknown_caller));
+			//Actions.close_cover(ctx);
 		}
 
         private static void Log_d(String tag, String msg) {
@@ -665,7 +713,7 @@ public class Functions {
 			
 			boolean isClosed = (status.compareTo("CLOSE") == 0);
 			
-			Log_d(LOG_TAG + ".cover_closed","Cover closed state is: " + true);
+			Log_d(LOG_TAG + ".cover_closed", "Cover closed state is: " + true);
 			
 			return isClosed;
 		}

@@ -67,7 +67,8 @@ public class PhoneWidget extends RelativeLayout {
         super(context, attrs);
 
         Log_d(LOG_TAG, "PhoneWidget: ");
-        mDebug = PreferenceManager.getDefaultSharedPreferences(getContext()).getBoolean("pref_dev_opts_debug", false);
+        if (!isInEditMode())
+            mDebug = PreferenceManager.getDefaultSharedPreferences(getContext()).getBoolean("pref_dev_opts_debug", false);
 
         mContext = context;
         setId(R.id.phone_widget);
@@ -80,6 +81,7 @@ public class PhoneWidget extends RelativeLayout {
         if (mPhoneResourceId != -1 && !isInEditMode()) {
             // options
             mPhoneWidget = (GridLayout)getActivity().getLayoutInflater().inflate(R.layout.phone_widget, this, false);
+            mPhoneWidget.setBackgroundColor(0x00000000); // clear background color
             this.addView(mPhoneWidget);
 
             mCallerName = (TextView)findViewById(R.id.caller_name);

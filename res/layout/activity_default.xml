@@ -5,8 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000"
-    tools:context=".DefaultActivity"
-    android:gravity="clip_vertical">
+    tools:context=".DefaultActivity" >
 
     <!-- default_content -->
     <RelativeLayout
@@ -16,10 +15,45 @@
         android:layout_marginTop="12dp"
         android:layout_centerHorizontal="true"
         android:gravity="center"
-        android:keepScreenOn="true"
-        android:visibility="visible">
+        android:keepScreenOn="true" >
 
-        <!-- default_content_alarm -->
+        <!-- camera -->
+        <RelativeLayout
+            android:id="@+id/default_content_camera"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+	        android:visibility="invisible" >
+	            
+	        <org.durka.hallmonitor.CameraPreview
+	            android:id="@+id/default_camera"
+        		android:layout_width="125dp"
+        		android:layout_height="125dp"
+	            android:layout_marginLeft="50dp"
+	            android:layout_marginRight="50dp"
+	            android:layout_centerHorizontal="true"
+	            android:visibility="visible" />
+	        
+	        <ImageButton
+	            android:id="@+id/default_camera_capture"
+	            android:src="@drawable/ic_notification"
+	            android:onClick="camera_capture"
+	            android:layout_width="wrap_content"
+	            android:layout_height="wrap_content"
+	            android:layout_gravity="left"
+	            android:layout_alignParentTop="true" />
+	        
+	        <ImageButton
+	            android:id="@+id/default_camera_back"
+	            android:src="@drawable/ic_menu_trash_holo_light"
+	            android:onClick="camera_back"
+	            android:layout_width="wrap_content"
+	            android:layout_height="wrap_content"
+	            android:layout_gravity="right"
+	            android:layout_alignParentRight="true" />
+        
+        </RelativeLayout>
+
+        <!-- default_alarm_content -->
         <RelativeLayout
             android:id="@+id/default_content_alarm"
             android:layout_width="match_parent"
@@ -132,6 +166,7 @@
 
            </RelativeLayout>
 
+            <!-- notifications panel -->
             <GridView
                 android:id="@+id/default_icon_container"
                 android:layout_width="wrap_content"
@@ -162,8 +197,19 @@
                 android:layout_alignParentEnd="false"
                 android:visibility="invisible" />
 
+            <ImageButton
+                android:id="@+id/camerabutton"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="30dp"
+                android:layout_height="wrap_content"
+                android:layout_above="@+id/default_icon_container"
+                android:layout_toLeftOf="@+id/torchbutton"
+                android:onClick="camera_start"
+                android:src="@drawable/ic_notification"
+                android:visibility="invisible" />
         </RelativeLayout>
 
+        <!-- phone widget -->
         <org.durka.hallmonitor.PhoneWidget
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -171,7 +217,6 @@
 
         </org.durka.hallmonitor.PhoneWidget>
 
-        <!-- phone_widget -->
     </RelativeLayout>
 
 </RelativeLayout>

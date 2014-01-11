@@ -9,6 +9,7 @@
     android:columnOrderPreserved="true"
     android:background="#FF000000">
 
+    <!-- caller name -->
     <TextView
         android:id="@+id/caller_name"
         android:layout_width="match_parent"
@@ -22,6 +23,7 @@
         android:textSize="24sp"
         android:textStyle="bold" />
 
+    <!-- caller number -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -34,6 +36,33 @@
         android:gravity="center_horizontal"
         android:textSize="14sp" />
 
+    <!-- indicaters -->
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_column="0"
+        android:layout_columnSpan="6"
+        android:layout_row="4"
+        android:layout_rowSpan="2"
+        android:layout_gravity="center_horizontal">
+
+        <ImageView
+            android:id="@+id/call_accept_slide"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:background="@drawable/ic_call_accept_slide" />
+
+        <ImageView
+            android:id="@+id/call_reject_slide"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/call_accept_slide"
+            android:layout_toRightOf="@+id/call_accept_slide"
+            android:background="@drawable/ic_call_reject_slide" />
+
+    </RelativeLayout>
+
+    <!-- accept panel -->
     <RelativeLayout
         android:id="@+id/call_accept_panel"
         android:layout_width="wrap_content"
@@ -55,6 +84,7 @@
 
     </RelativeLayout>
 
+    <!-- reject panel -->
     <RelativeLayout
         android:id="@+id/call_reject_panel"
         android:layout_width="wrap_content"
@@ -73,32 +103,6 @@
             android:layout_gravity="right"
             android:layout_marginRight="10dp"
             android:background="@drawable/ic_call_reject" />
-
-    </RelativeLayout>
-
-    <RelativeLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_column="0"
-        android:layout_columnSpan="6"
-        android:layout_row="4"
-        android:layout_rowSpan="2"
-        android:layout_marginTop="15dp"
-        android:layout_gravity="center_horizontal">
-
-        <ImageView
-            android:id="@+id/call_accept_slide"
-            android:layout_width="100dp"
-            android:layout_height="wrap_content"
-            android:background="@drawable/ic_call_accept_slide" />
-
-        <ImageView
-            android:id="@+id/call_reject_slide"
-            android:layout_width="100dp"
-            android:layout_height="wrap_content"
-            android:layout_toEndOf="@id/call_accept_slide"
-            android:layout_toRightOf="@+id/call_accept_slide"
-            android:background="@drawable/ic_call_reject_slide" />
 
     </RelativeLayout>
 
