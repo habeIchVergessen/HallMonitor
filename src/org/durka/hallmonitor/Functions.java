@@ -39,6 +39,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
@@ -73,11 +74,13 @@ public class Functions {
 	
 	public static DefaultActivity defaultActivity;
 	public static Configuration configurationActivity;
-	
+
+
 	/**
 	 * Provides methods for performing actions. (e.g. what to do when the cover is opened and closed etc.)
 	 */
 	public static class Actions {
+        private static final String LOG_TAG = "F.Act";
 		
 		// used for the timer to turn off the screen on a delay
         private static Timer timer = new Timer();
@@ -91,51 +94,65 @@ public class Functions {
          * After pref_delay milliseconds locks the screen.
          * @param ctx Application context.
          */
-		public static void close_cover(Context ctx) {
+        public static void close_cover(Context ctx) {
+            close_cover(ctx, null);
+        }
+
+		public static void close_cover(Context ctx, Bundle extras) {
 			
-			Log.d("F.Act.close_cover", "Close cover event receieved.");
+			Log_d(LOG_TAG + ".close_cover", "Close cover event received." + (extras == null ? "" : ", extras: " + extras.size()));
 			
 			//save the cover state
 			Events.set_cover(true);
-			
-			
+
 		    // step 1: bring up the default activity window
 			//we are using the show when locked flag as we'll re-use this method to show the screen on power button press
 			if (!DefaultActivity.on_screen) {
-				ctx.startActivity(new Intent(ctx, DefaultActivity.class)
-										.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-												| Intent.FLAG_ACTIVITY_NO_ANIMATION
-												| WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED));
+                Intent start = new Intent(ctx, DefaultActivity.class);
+                start.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+                // restore extras from previously running task
+                if (extras != null)
+                    start.putExtras(extras);
+				ctx.startActivity(start);
 			}
             
-			
-			//if we are running in root enabled mode then lets up the sensitivity on the view screen
-			//so we can use the screen through the window
-			 if (PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_runasroot", false)) {
-                 Log.d("F.Act.close_cover", "We're root enabled so lets boost the sensitivity...");
-
-                 if (Build.DEVICE.equals(DEV_SERRANO_LTE)) {
-                     run_commands_as_root(new String[]{"echo module_on_master > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result", "echo clear_cover_mode,3 > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result"});
-                 } else // others devices
-                     run_commands_as_root(new String[]{"echo clear_cover_mode,1 > /sys/class/sec/tsp/cmd"});
-
-				 Log.d("F.Act.close_cover", "...Sensitivity boosted, hold onto your hats!");
-			 }
-
-			 rearmScreenOffTimer(ctx);
+			setTouchScreenCoverMode(ctx, true);
+	        rearmScreenOffTimer(ctx);
 		}
+
+        private static void setTouchScreenCoverMode(Context ctx, boolean coverMode) {
+            //if we are running in root enabled mode then lets up the sensitivity on the view screen
+            //so we can use the screen through the window
+            if (PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_runasroot", false)) {
+                Log_d(LOG_TAG, "setTouchScreenCoverMode: " + coverMode);
+
+                if (coverMode) {
+                    Log_d(LOG_TAG + "setTouchScreenCoverMode", "We're root enabled so lets boost the sensitivity...");
+
+                    if (Build.DEVICE.equals(DEV_SERRANO_LTE)) {
+                        run_commands_as_root(new String[]{"echo module_on_master > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result", "echo clear_cover_mode,3 > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result"});
+                    } else // others devices
+                        run_commands_as_root(new String[]{"echo clear_cover_mode,1 > /sys/class/sec/tsp/cmd"});
+
+                    Log_d(LOG_TAG + "setTouchScreenCoverMode", "...Sensitivity boosted, hold onto your hats!");
+                } else {
+                    Log_d(LOG_TAG + "setTouchScreenCoverMode", "We're root enabled so lets revert the sensitivity...");
+                    run_commands_as_root(new String[]{"cd /sys/class/sec/tsp", "echo clear_cover_mode,0 > cmd && cat /sys/class/sec/tsp/cmd_result"});
+                    Log_d(LOG_TAG + "setTouchScreenCoverMode", "...Sensitivity reverted, sanity is restored!");
+                }
+            }
+        }
 
 		/**
 		 * ScreenOnTimer
 		 */
-		public static void rearmScreenOffTimer(Context ctx)
-		{
+		public static void rearmScreenOffTimer(Context ctx) {
 			boolean coverClosed = Is.cover_closed(ctx);
 			
 			// don't let run more than 1 timer
 			stopScreenOffTimer("called from rearmScreenOffTimer");
 			
-			Log.d("F.Act.rearmScreenOffTimer", "cover_closed = " + coverClosed);
+			Log_d(LOG_TAG + ".rearmScreenOffTimer", "cover_closed = " + coverClosed);
 			
 			if (!coverClosed)
 				return;
@@ -147,24 +164,21 @@ public class Functions {
 			ComponentName me = new ComponentName(ctx, AdminReceiver.class);
 			if (!dpm.isAdminActive(me)) {
 				// if we're not an admin, we can't do anything
-				Log.d("F.Act.rearmScreenOffTimer", "We are not an admin so cannot do anything.");
+				Log_d(LOG_TAG + ".rearmScreenOffTimer", "We are not an admin so cannot do anything.");
 				return;
 			}
-			
-			
-			
+
             //step 2: wait for the delay period and turn the screen off
             int delay = PreferenceManager.getDefaultSharedPreferences(ctx).getInt("pref_delay", 10000);
             
-            Log.d("F.Act.rearmScreenOffTimer", "Delay set to: " + delay);
-            
-            
+            Log_d(LOG_TAG + ".rearmScreenOffTimer", "Delay set to: " + delay);
+
             //using the handler is causing a problem, seems to lock up the app, hence replaced with a Timer
             timer.schedule(timerTaskScreenOff = new TimerTask() {
 			//handler.postDelayed(new Runnable() {
 				@Override
 				public void run() {	
-					Log.d("F.Act.rearmScreenOffTimer", "Locking screen now.");
+					Log_d(LOG_TAG + ".rearmScreenOffTimer", "Locking screen now.");
 					dpm.lockNow();
 					//FIXME Would it be better to turn the screen off rather than actually locking
 					//presumably then it will auto lock as per phone configuration
@@ -179,7 +193,7 @@ public class Functions {
 		
 		public static void stopScreenOffTimer(String info)
 		{
-			Log.d("F.Act.stopScreenOffTimer", "active: " + (timerTaskScreenOff != null) + (info != null ? " (" + info + ")" : ""));
+			Log_d(LOG_TAG + ".stopScreenOffTimer", "active: " + (timerTaskScreenOff != null) + (info != null ? " (" + info + ")" : ""));
 			if (timerTaskScreenOff != null) {
 				timerTaskScreenOff.cancel();
 				timerTaskScreenOff = null;
@@ -194,7 +208,7 @@ public class Functions {
 		 */
 		public static void open_cover(Context ctx) {
 			
-			Log.d("F.Act.open_cover", "Open cover event receieved.");
+			Log_d(LOG_TAG + ".open_cover", "Open cover event receieved.");
 			
 			//we don't want the configuration screen displaying when we wake back up
 			if (configurationActivity != null) configurationActivity.moveTaskToBack(true);
@@ -209,14 +223,8 @@ public class Functions {
 
 			//save the cover state
 			Events.set_cover(false);
-			
-			//if we are running in root enabled mode then lets revert the sensitivity on the view screen
-			//so we can use the device as normal
-			 if (PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_runasroot", false)) {
-				 Log.d("F.Act.close_cover", "We're root enabled so lets revert the sensitivity...");
-				 run_commands_as_root(new String[]{"cd /sys/class/sec/tsp", "echo clear_cover_mode,0 > cmd && cat /sys/class/sec/tsp/cmd_result"});
-				 Log.d("F.Act.close_cover", "...Sensitivity reverted, sanity is restored!");
-			 }
+
+            setTouchScreenCoverMode(ctx, false);
 		}
 
         @SuppressWarnings("deprecation")
@@ -237,7 +245,7 @@ public class Functions {
 		 * @param act Activity context.
 		 */
 		public static void start_service(Activity act) {
-			Log.d("F.Act.start_service", "Start service called.");
+			Log_d(LOG_TAG + ".start_service", "Start service called.");
 			// Become device admin
 			DevicePolicyManager dpm = (DevicePolicyManager) act.getSystemService(Context.DEVICE_POLICY_SERVICE);
 			ComponentName me = new ComponentName(act, AdminReceiver.class);
@@ -255,7 +263,7 @@ public class Functions {
 		 */
 		public static void stop_service(Context ctx) {
 			
-			Log.d("F.Act.stop_service", "Stop service called.");
+			Log_d(LOG_TAG + ".stop_service", "Stop service called.");
 			
 			ctx.stopService(new Intent(ctx, ViewCoverService.class));
 			ctx.stopService(new Intent(ctx, NotificationService.class));
@@ -274,7 +282,7 @@ public class Functions {
 		 */
 		public static void register_widget(Activity act, String widgetType) {
 			
-			Log.d("F.Act.register_widget", "Register widget called for type: " + widgetType);
+			Log_d(LOG_TAG + ".register_widget", "Register widget called for type: " + widgetType);
 			//hand off to the HM App Widget Manager for processing
 			hmAppWidgetManager.register_widget(act, widgetType);
 		}
@@ -286,7 +294,7 @@ public class Functions {
 		 */
 		public static void unregister_widget(Activity act, String widgetType) {
 			
-			Log.d("F.Act.unregister_widget", "unregister widget called for type: " + widgetType);
+			Log_d(LOG_TAG + ".unregister_widget", "unregister widget called for type: " + widgetType);
 			//hand off to the HM App Widget Manager for processing
 			hmAppWidgetManager.unregister_widget(act, widgetType);
 		}
@@ -320,7 +328,7 @@ public class Functions {
 	            
 	            //run commands
 	            for (String tmpCmd : cmds) {
-	            	Log.d("F.Act.run_comm_as_root", "Running command: " + tmpCmd);
+	            	Log_d(LOG_TAG + ".run_comm_as_root", "Running command: " + tmpCmd);
                     os.writeBytes(tmpCmd+"\n");
 	            }      
 	            os.writeBytes("exit\n");  
@@ -332,7 +340,7 @@ public class Functions {
 		            while ((currentLine = isBr.readLine()) != null) {
 		              output += currentLine + "\n";
 		            } 
-		            Log.d("F.Act.run_comm_as_root", "Have output: " + output);
+		            Log_d(LOG_TAG + ".run_comm_as_root", "Have output: " + output);
 	           
 		            //log out the error output
 		            String error = "";
@@ -340,12 +348,12 @@ public class Functions {
 		            while ((currentLine = esBr.readLine()) != null) {
 		              error += currentLine + "\n";
 		            }	           
-		            Log.d("F.Act.run_comm_as_root", "Have error: " + error);
+		            Log_d(LOG_TAG + ".run_comm_as_root", "Have error: " + error);
 
                     result = output.trim();
                 }
 	        } catch (IOException ioe) {
-	        	Log.e("F.Act.run_comm_as_root","Failed to run command!", ioe);
+	        	Log.e(LOG_TAG + ".run_comm_as_root","Failed to run command!", ioe);
 	        }
 
             return result;
@@ -353,14 +361,14 @@ public class Functions {
 
 
 		public static void hangup_call() {
-			Log.d("phone", "hanging up! goodbye");
+			Log_d("phone", "hanging up! goodbye");
 			run_commands_as_root(new String[]{"input keyevent 6"}, false);
 			DefaultActivity.phone_ringing = false;
 			defaultActivity.refreshDisplay();
 		}
 		
 		public static void pickup_call() {
-			Log.d("phone", "picking up! hello");
+			Log_d("phone", "picking up! hello");
 			run_commands_as_root(new String[]{"input keyevent 5"}, false);
 			//DefaultActivity.phone_ringing = false;
 			//defaultActivity.refreshDisplay();
@@ -384,7 +392,7 @@ public class Functions {
 		
 		public static void setup_notifications() {
 			StatusBarNotification[] notifs = NotificationService.that.getActiveNotifications();
-			Log.d("DA-oC", Integer.toString(notifs.length) + " notifications");
+			Log_d("DA-oC", Integer.toString(notifs.length) + " notifications");
 			GridView grid = (GridView)defaultActivity.findViewById(R.id.default_icon_container);
 
             final NotificationAdapter nA = new NotificationAdapter(defaultActivity, notifs);
@@ -425,15 +433,20 @@ public class Functions {
 					mNotificationManager.cancel(42);
 			}
 		}
+
+        private static void Log_d(String tag, String msg) {
+            if (DefaultActivity.isDebug())
+                Log.d(tag, msg);
+        }
 	}
 
-	
 	/**
 	 * Provides event handling.
 	 */
 	public static class Events {
-		
-		//is the cover closed
+        private static final String LOG_TAG = "F.Evt";
+
+        //is the cover closed
 		private static boolean cover_closed;
 		
 		/**
@@ -445,7 +458,7 @@ public class Functions {
 		 */
 		public static void boot(Context ctx) {
 			
-			Log.d("F.Evt.boot", "Boot called.");
+			Log_d(LOG_TAG + ".boot", "Boot called.");
 			
 			if (PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_enabled", false)) {
 	    		Intent startServiceIntent = new Intent(ctx, ViewCoverService.class);
@@ -463,7 +476,7 @@ public class Functions {
 		 * @param data Intent that holds the data received.
 		 */
 		public static void activity_result(Context ctx, int request, int result, Intent data) {
-			Log.d("F.Evt.activity_result", "Activity result received: request=" + Integer.toString(request) + ", result=" + Integer.toString(result));
+			Log_d(LOG_TAG + ".activity_result", "Activity result received: request=" + Integer.toString(request) + ", result=" + Integer.toString(result));
 			switch (request) {
 			  //call back for admin access request
 			  case DEVICE_ADMIN_WAITING:
@@ -476,12 +489,12 @@ public class Functions {
 					// we asked to be an admin and the user clicked Cancel (why?)
 					// complain, and un-check pref_enabled
 					Toast.makeText(ctx, ctx.getString(R.string.admin_refused), Toast.LENGTH_SHORT).show();
-					Log.d("F.Evt.activity_result", "pref_enabled = " + Boolean.toString(PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_enabled", true)));
+					Log_d(LOG_TAG + ".activity_result", "pref_enabled = " + Boolean.toString(PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_enabled", true)));
 					PreferenceManager.getDefaultSharedPreferences(ctx)
 							.edit()
 							.putBoolean("pref_enabled", false)
 							.commit();
-					Log.d("F.Evt.activity_result", "pref_enabled = " + Boolean.toString(PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_enabled", true)));
+					Log_d(LOG_TAG + ".activity_result", "pref_enabled = " + Boolean.toString(PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_enabled", true)));
 				}
 				break;
 			  //call back for appwidget pick	
@@ -522,8 +535,8 @@ public class Functions {
 		 * @param admin Is the admin permission granted.
 		 */
 		public static void device_admin_status(Context ctx, boolean admin) {
-			
-			Log.d("F.Evt.dev_adm_status", "Device admin status called with admin status: " + admin);
+
+			Log_d(LOG_TAG + ".dev_adm_status", "Device admin status called with admin status: " + admin);
 			
 			Toast.makeText(ctx, ctx.getString(admin ? R.string.admin_granted : R.string.admin_revoked), Toast.LENGTH_SHORT).show();
 			
@@ -559,7 +572,7 @@ public class Functions {
 		 */
 		public static void proximity(Context ctx, float value) {
 			
-			Log.d("F.Evt.proximity", "Proximity method called with value: " + value + " ,whilst cover_closed is: " + cover_closed);
+			Log_d(LOG_TAG + ".proximity", "Proximity method called with value: " + value + " ,whilst cover_closed is: " + cover_closed);
 			
 			if (value > 0) {
 				if (cover_closed) {
@@ -576,14 +589,14 @@ public class Functions {
 					}
 				}
 			}
-			//Log.d(ctx.getString(R.string.app_name), String.format("cover_closed = %b", cover_closed));
+			//Log_d(ctx.getString(R.string.app_name), String.format("cover_closed = %b", cover_closed));
 		}
 
 
 		public static void incoming_call(final Context ctx, final String number) {
-			Log.d("phone", "call from " + number);
+			Log_d("phone", "call from " + number);
 			if (Functions.Is.cover_closed(ctx)) {
-				Log.d("phone", "but the screen is closed. screen my calls");
+				Log_d("phone", "but the screen is closed. screen my calls");
 				
 				//if the cover is closed then
 				//we want to pop this activity up over the top of the dialer activity
@@ -602,8 +615,8 @@ public class Functions {
 						intent.setAction(Intent.ACTION_MAIN);
 						
 						// parameter
-                        intent.putExtra(DefaultActivity.INTENT_phoneWidgetShow, true);
-						intent.putExtra(DefaultActivity.INTENT_phoneWidgetIncomingNumber, number);
+                        intent.putExtra(PhoneWidget.INTENT_phoneWidgetShow, true);
+						intent.putExtra(PhoneWidget.INTENT_phoneWidgetIncomingNumber, number);
 						
 						// start
 						ctx.startActivity(intent);
@@ -613,17 +626,23 @@ public class Functions {
 		}
 		
 		public static void call_finished(Context ctx) {
-			Log.d("phone", "call is over, cleaning up");
+			Log_d("phone", "call is over, cleaning up");
 			DefaultActivity.phone_ringing = false;
 			((TextView)defaultActivity.findViewById(R.id.call_from)).setText(ctx.getString(R.string.unknown_caller));
 		}
+
+        private static void Log_d(String tag, String msg) {
+            if (DefaultActivity.isDebug())
+                Log.d(tag, msg);
+        }
 	}
 	
 	/**
 	 * Contains methods to check the state
 	 */
 	public static class Is {
-		
+        private static final String LOG_TAG = "F.Is";
+
 		public static boolean torchIsOn = false;
 		
 		/**
@@ -633,7 +652,7 @@ public class Functions {
 		 */
 		public static boolean cover_closed(Context ctx) {
 			
-			Log.d("F.Is.cover_closed", "Is cover closed called.");
+			Log_d(LOG_TAG + ".cover_closed", "Is cover closed called.");
 			
 			String status = "";
 			try {
@@ -646,7 +665,7 @@ public class Functions {
 			
 			boolean isClosed = (status.compareTo("CLOSE") == 0);
 			
-			Log.d("F.Is.cover_closed","Cover closed state is: " + true);
+			Log_d(LOG_TAG + ".cover_closed","Cover closed state is: " + true);
 			
 			return isClosed;
 		}
@@ -659,18 +678,18 @@ public class Functions {
 		 */
 		public static boolean service_running(Context ctx) {
 			
-			Log.d("F.Is.service_running", "Is service running called.");
+			Log_d(LOG_TAG + ".service_running", "Is service running called.");
 			
 			ActivityManager manager = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
 			for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
 				if (ViewCoverService.class.getName().equals(service.service.getClassName())) {
 					// the service is running
-					Log.d("F.Is.service_running", "The service is running.");
+					Log_d(LOG_TAG + ".service_running", "The service is running.");
 					return true;
 				}
 			}
 			// the service must not be running
-			Log.d("F.Is.service_running", "The service is NOT running.");
+			Log_d(LOG_TAG + ".service_running", "The service is NOT running.");
 			return false;
 		}
 		
@@ -683,23 +702,29 @@ public class Functions {
 		 */
 		public static boolean widget_enabled(Context ctx, String widgetType) {
 			
-			Log.d("F.Is.wid_enabled", "Is default widget enabled called with widgetType: " + widgetType);
+			Log_d(LOG_TAG + ".wid_enabled", "Is default widget enabled called with widgetType: " + widgetType);
 			
 			boolean widgetEnabled = Functions.hmAppWidgetManager.doesWidgetExist(widgetType);
 			
-			Log.d("F.Is.wid_enabled", widgetType + " widget enabled state is: " + widgetEnabled);
+			Log_d(LOG_TAG + ".wid_enabled", widgetType + " widget enabled state is: " + widgetEnabled);
 			
 			return widgetEnabled;
 		}
+
+        private static void Log_d(String tag, String msg) {
+            if (DefaultActivity.isDebug())
+                Log.d(tag, msg);
+        }
 	}
-	
+
+    /*
 	public static class Util {
 		// from http://stackoverflow.com/questions/3712112/search-contact-by-phone-number
 		public static String getContactName(Context ctx, String number) {
 			
 			if (number.equals("")) return "";
 			
-			Log.d("phone", "looking up " + number + "...");
+			Log_d("phone", "looking up " + number + "...");
 			
 		    Uri uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number));
 		    String name = number;
@@ -720,9 +745,14 @@ public class Functions {
 		        }
 		    }
 
-		    Log.d("phone", "...result is " + name);
+		    Log_d("phone", "...result is " + name);
 		    return name;
 		}
-	}
 
+        private static void Log_d(String tag, String msg) {
+            if (DefaultActivity.isDebug())
+                Log.d(tag, msg);
+        }
+	}
+    */
 }

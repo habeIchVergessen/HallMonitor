@@ -11,6 +11,7 @@ import android.appwidget.AppWidgetProviderInfo;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 /**
@@ -35,7 +36,7 @@ public class HMAppWidgetManager {
     //default constructor
     public HMAppWidgetManager() {
     	//nothing to do
-    	Log.d("HMAWM.constructor","HMAppWidgetManager instantiated.");
+    	Log_d("HMAWM.constructor","HMAppWidgetManager instantiated.");
     }
     
     /**
@@ -45,7 +46,7 @@ public class HMAppWidgetManager {
      */
 	public void register_widget(Activity act, String widgetType) {
 	
-		Log.d("HMAWM.register_widget","Register widget called with type: " + widgetType);
+		Log_d("HMAWM.register_widget","Register widget called with type: " + widgetType);
 		
 		//if we haven't yet created an app widget manager and app widget host instance then do so
 		if (mAppWidgetManager == null) mAppWidgetManager = AppWidgetManager.getInstance(act);
@@ -54,7 +55,7 @@ public class HMAppWidgetManager {
 		//get an id for our app widget
 		int appWidgetId = mAppWidgetHost.allocateAppWidgetId();	
 		
-		Log.d("HMAWM.register_widget","appWidgetId allocated: " + appWidgetId);
+		Log_d("HMAWM.register_widget","appWidgetId allocated: " + appWidgetId);
 				
 		//create an intent to allow us to fire up the widget picker
 	    Intent pickIntent = new Intent(AppWidgetManager.ACTION_APPWIDGET_PICK);
@@ -85,7 +86,7 @@ public class HMAppWidgetManager {
 	    Bundle extras = data.getExtras();
 	    int appWidgetId = extras.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
 	    
-	    Log.d("HMAWM.configureWidget","Configure widget called with id: " + appWidgetId);
+	    Log_d("HMAWM.configureWidget","Configure widget called with id: " + appWidgetId);
 	    
 	    //use the app widget id to get the app widget info
 	    AppWidgetProviderInfo appWidgetInfo = mAppWidgetManager.getAppWidgetInfo(appWidgetId);
@@ -93,7 +94,7 @@ public class HMAppWidgetManager {
 	    //check if we need to configure
 	    if (appWidgetInfo.configure != null) {
 	    	
-	    	Log.d("HMAWM.configureWidget","This is a configurable widget, launching widget configuraiton activity");
+	    	Log_d("HMAWM.configureWidget","This is a configurable widget, launching widget configuraiton activity");
 	    	
 	    	//we do so launch into configuration dialog
 	        Intent intent = new Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE);
@@ -102,7 +103,7 @@ public class HMAppWidgetManager {
 	        ((Activity)ctx).startActivityForResult(intent, Functions.REQUEST_CONFIGURE_APPWIDGET);
 	    } else {
 	    	
-	    	Log.d("HMAWM.configureWidget","This is NOT a configurable widget.");
+	    	Log_d("HMAWM.configureWidget","This is NOT a configurable widget.");
 	    	
 	    	//we don't, just create it already
 	        createWidget(data, ctx);
@@ -120,7 +121,7 @@ public class HMAppWidgetManager {
 	    Bundle extras = data.getExtras();
 	    int appWidgetId = extras.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
 	    
-	    Log.d("HMAWM.createWidget","Create widget called with id: " + appWidgetId);
+	    Log_d("HMAWM.createWidget","Create widget called with id: " + appWidgetId);
 	    
 	    //use the app widget id to get the app widget info
 	    AppWidgetProviderInfo appWidgetInfo = mAppWidgetManager.getAppWidgetInfo(appWidgetId);
@@ -148,7 +149,7 @@ public class HMAppWidgetManager {
 	    //start the widget listening
 	    mAppWidgetHost.startListening();
 	    
-	    Log.d("HMAWM.createWidget","Widget created and stored of type: " + currentWidgetType);
+	    Log_d("HMAWM.createWidget","Widget created and stored of type: " + currentWidgetType);
 	}	
 	
 	/**
@@ -157,7 +158,7 @@ public class HMAppWidgetManager {
 	 */
 	public void deleteAppWidgetId(int appWidgetId) {
 		
-		Log.d("HMAWM.deleteAppWidgetId","Deleting widget id: " + appWidgetId);
+		Log_d("HMAWM.deleteAppWidgetId","Deleting widget id: " + appWidgetId);
 		
 		//stop the widget listening
 		mAppWidgetHost.stopListening();
@@ -173,7 +174,7 @@ public class HMAppWidgetManager {
 	 */
 	public void unregister_widget(Context ctx, String widgetType) {
 		
-		Log.d("HMAWM.unregister_widget","Unregister widget called with type: " + widgetType);
+		Log_d("HMAWM.unregister_widget","Unregister widget called with type: " + widgetType);
 		
 		widgetsMap.remove(widgetType);
 		
@@ -187,9 +188,9 @@ public class HMAppWidgetManager {
 	 */
 	public AppWidgetHostView getAppWidgetHostViewByType(String widgetType) {
 		
-		Log.d("HMAWM.getAppWidgetHostViewByType","Widget requested of type: " + widgetType);
+		Log_d("HMAWM.getAppWidgetHostViewByType","Widget requested of type: " + widgetType);
 		
-		AppWidgetHostView thisWidget = widgetsMap.get(widgetType);;
+		AppWidgetHostView thisWidget = widgetsMap.get(widgetType);
 		
 		if (thisWidget == null) Log.w("HMAWM.getAppWidgetHostViewByType","Widget type does not exist in widget Map: " + widgetType);
 		
@@ -204,9 +205,13 @@ public class HMAppWidgetManager {
 	 */
 	public boolean doesWidgetExist(String widgetType) {
 		
-		Log.d("HMAWM.doesWidgetExist","Checking for Widget of type: " + widgetType);
+		Log_d("HMAWM.doesWidgetExist","Checking for Widget of type: " + widgetType);
 		
 		return (widgetsMap.get(widgetType) != null);
 	}
-	
+
+    private void Log_d(String tag, String message) {
+        if (DefaultActivity.isDebug())
+            Log.d(tag, message);
+    }
 }

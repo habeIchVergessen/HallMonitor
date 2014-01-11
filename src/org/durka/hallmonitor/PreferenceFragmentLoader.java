@@ -4,21 +4,24 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
-import android.preference.PreferenceScreen;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.widget.Toast;
 
-/**
- * Created by ladmin on 07.01.14.
- */
 public class PreferenceFragmentLoader extends PreferenceFragment  implements SharedPreferences.OnSharedPreferenceChangeListener {
     private final String LOG_TAG = "PreferenceFragmentLoader";
+
+    private boolean mDebug = DefaultActivity.isDebug();
+    private int mAboutClicked = 0;
+    private int mAboutClickCount = 7;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -28,25 +31,50 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
             final String resourceName = getArguments().getString("resource", "");
 
             Context context = getActivity().getApplicationContext();
+
+            // debug
+            if (mDebug)
+                Toast.makeText(getActivity(), "debug is enabled!", Toast.LENGTH_LONG).show();
+
             final int resourceId = context.getResources().getIdentifier(resourceName, "xml", context.getPackageName());
 
             PreferenceManager.setDefaultValues(getActivity(), resourceId, false);
             addPreferencesFromResource(resourceId);
         } catch (Exception e) {
-            Log.d(LOG_TAG, "onCreate: exception occurred! " + e.getMessage());
+            Log_d(LOG_TAG, "onCreate: exception occurred! " + e.getMessage());
+        }
+
+        // setup about preference for debug
+        Preference about = findPreference("pref_about");
+        if (about != null) {
+            // init onClick listener
+            about.setEnabled(true);
+            about.setSelectable(true);
+            about.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                @Override
+                public boolean onPreferenceClick(Preference preference) {
+                    mAboutClicked += 1;
+                    if (mAboutClicked == mAboutClickCount) {
+                        mAboutClicked = 0;
+                        SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
+                        prefs.edit().putBoolean("pref_dev_opts_debug", !mDebug).commit();
+                        Toast.makeText(getActivity(), "debug is " + (prefs.getBoolean("pref_dev_opts_debug", false) ? "enabled" : "disabled") + " now!", Toast.LENGTH_LONG).show();
+                    }
+
+                    return true;
+                }
+            });
+
+            // mask text as disabled
+            about.setTitle(getTextDisabledFormatted(about.getTitle()));
+            about.setSummary(getTextDisabledFormatted(about.getSummary()));
         }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        Log.d(LOG_TAG, "onResume: ");
-        // close pref_phone_screen preferenceScreen
-//        try {
-//            ((PreferenceScreen)getPreferenceScreen().findPreference("pref_phone_screen")).getDialog().dismiss();
-//        } catch (Exception e) {
-//            ;
-//        }
+        Log_d(LOG_TAG, "onResume: ");
 
         SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
 
@@ -66,7 +94,7 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
     @Override
     public void onPause() {
         super.onPause();
-        Log.d(LOG_TAG, "onPause: ");
+        Log_d(LOG_TAG, "onPause: ");
         // don't unregister, because we still want to receive the notification when
         // pref_enabled is changed in onActivityResult
         // FIXME is it okay to just never unregister??
@@ -76,7 +104,7 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-        Log.d(LOG_TAG + "-oSPC", "changed key " + key);
+        Log_d(LOG_TAG + "-oSPC", "changed key " + key);
 
         // update display
         if (findPreference(key) instanceof CheckBoxPreference) {
@@ -161,15 +189,30 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
     }
 
     private void enablePhoneScreen(SharedPreferences prefs) {
-        boolean phoneControlState = prefs.getBoolean("pref_enabled", false) && prefs.getBoolean("pref_runasroot", false) && prefs.getBoolean("pref_phone_controls_user", false);
+        boolean phoneControlState = prefs.getBoolean("pref_enabled", false) && prefs.getBoolean("pref_runasroot", false);
         boolean phoneControlConfig = prefs.getBoolean("pref_phone_controls", false);
         Preference phoneControl = findPreference("pref_phone_controls_user");
 
-        if (phoneControlConfig != phoneControlState) {
-            if (phoneControl != null)
-                phoneControl.setEnabled(phoneControlState);
-            prefs.edit().putBoolean("pref_phone_controls", phoneControlState).commit();
-        }
+        if (phoneControlConfig != phoneControlState && phoneControl != null)
+            phoneControl.setEnabled(phoneControlState);
+        if (phoneControlConfig != (phoneControlState && prefs.getBoolean("pref_phone_controls_user", false)))
+            prefs.edit().putBoolean("pref_phone_controls", !phoneControlConfig).commit();
     }
 
+    private void Log_d(String tag, String message) {
+        if (mDebug)
+            Log.d(tag, message);
+    }
+
+    private SpannableString getTextDisabledFormatted(CharSequence text) {
+        // TODO: read default text color
+        int defaultTextColor = Color.BLACK;
+
+        int alpha = Color.argb((int)(0.5f * 255), Color.red(defaultTextColor), Color.green(defaultTextColor), Color.blue(defaultTextColor));
+
+        SpannableString spannableString = new SpannableString(text);
+        spannableString.setSpan(new ForegroundColorSpan(alpha), 0, text.length(), 0);
+
+        return spannableString;
+    }
 }

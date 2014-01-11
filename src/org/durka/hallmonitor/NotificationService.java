@@ -14,6 +14,7 @@
  */
 package org.durka.hallmonitor;
 
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
@@ -25,19 +26,19 @@ public class NotificationService extends NotificationListenerService {
 	
 	@Override
 	public void onCreate() {
-		Log.d("NS-oC", "ohai");
+		Log_d("NS-oC", "ohai");
 		that = this;
 	}
 	
 	@Override
 	public void onDestroy() {
-		Log.d("NS-oD", "kthxbai");
+		Log_d("NS-oD", "kthxbai");
 		that = null;
 	}
 	
 	@Override
 	public void onNotificationPosted(StatusBarNotification sbn) {
-		Log.d("NS-oNP", "notification posted: " + sbn.toString());
+		Log_d("NS-oNP", "notification posted: " + sbn.toString());
 		if (DefaultActivity.on_screen) {
 			Functions.Actions.refresh_notifications();
 		}
@@ -45,12 +46,14 @@ public class NotificationService extends NotificationListenerService {
 
 	@Override
 	public void onNotificationRemoved(StatusBarNotification sbn) {
-		Log.d("NS-oNR", "notification removed: " + sbn.toString());
+		Log_d("NS-oNR", "notification removed: " + sbn.toString());
 		if (DefaultActivity.on_screen) {
 			Functions.Actions.refresh_notifications();
 		}
 	}
 	
-	
-
+	private void Log_d(String tag, String message) {
+        if (PreferenceManager.getDefaultSharedPreferences(getBaseContext()).getBoolean("pref_dev_opts_debug", false))
+            Log.d(tag, message);
+    }
 }

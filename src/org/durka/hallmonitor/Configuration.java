@@ -16,13 +16,16 @@ package org.durka.hallmonitor;
 
 import android.app.Activity;
 import android.app.FragmentManager;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -33,12 +36,14 @@ import java.util.List;
 public class Configuration extends PreferenceActivity {
     private final String LOG_TAG = "Configuration";
 
+    private int mDefaultTextColor = Color.BLACK;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		
         Functions.configurationActivity = this;
-        
+
         PreferenceFragment preferenceFragment = new PreferenceFragmentLoader();
 
         // add extra resource to load xml
@@ -80,9 +85,9 @@ public class Configuration extends PreferenceActivity {
                 // update action bar
                 updateHeaderTitle(preference.getTitle());
             } else
-                Log.d(LOG_TAG, "onPreferenceStartFragment: given class is not a PreferenceFragment");
+                Log_d(LOG_TAG, "onPreferenceStartFragment: given class is not a PreferenceFragment");
         } catch (Exception e) {
-            Log.d(LOG_TAG, "onPreferenceStartFragment: exception occurred! " + e.getMessage());
+            Log_d(LOG_TAG, "onPreferenceStartFragment: exception occurred! " + e.getMessage());
         }
 
         return false;
@@ -104,11 +109,12 @@ public class Configuration extends PreferenceActivity {
     public void onBackPressed() {
         CharSequence title = getTitle();
         int idx;
+
         if ((idx = getFragmentManager().getBackStackEntryCount()) > 0) {
             title = getFragmentManager().getBackStackEntryAt(idx - 1).getName();
-        }
-
-        super.onBackPressed();
+            getFragmentManager().popBackStackImmediate(); // TODO test back stack
+        } else
+            super.onBackPressed();
 
         updateHeaderTitle(title);
     }
@@ -116,5 +122,10 @@ public class Configuration extends PreferenceActivity {
     private void updateHeaderTitle(CharSequence title) {
         getActionBar().setTitle(title);
         getActionBar().setDisplayHomeAsUpEnabled((getFragmentManager().getBackStackEntryCount() > 0));
+    }
+
+    private void Log_d(String tag, String msg) {
+        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_dev_opts_debug", false))
+            Log.d(tag, msg);
     }
 }

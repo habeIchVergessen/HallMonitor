@@ -7,5 +7,9 @@
     <item type="id" name="preference_preview_color_panel" />
     <item type="id" name="dialog_color_picker_extra_layout_landscape" />
 
+    <!-- preferences -->
     <item type="id" name="preferences_phone" />
+
+    <!-- phone widget -->
+    <item type="id" name="phone_widget" />
 </resources>

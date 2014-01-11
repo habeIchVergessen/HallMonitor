@@ -33,7 +33,7 @@ public class PreferenceSwitchable extends Preference {
 
     @Override
     protected View onCreateView(ViewGroup parent) {
-        Log.d(LOG_TAG, "onCreateView: " + getKey());
+        //Log.d(LOG_TAG, "onCreateView: " + getKey());
 
         LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = inflater.inflate(R.layout.preference_switchable_layout, parent, false);
@@ -88,7 +88,7 @@ public class PreferenceSwitchable extends Preference {
 
     @Override
     public void onSetInitialValue(boolean restorePersistedValue, Object defaultValue) {
-        Log.d(LOG_TAG, "onSetInitialValue: " + restorePersistedValue + ", " + defaultValue);
+        //Log.d(LOG_TAG, "onSetInitialValue: " + restorePersistedValue + ", " + defaultValue);
         boolean value = false;
 
         if (!restorePersistedValue && (defaultValue instanceof Boolean)) {
@@ -99,17 +99,17 @@ public class PreferenceSwitchable extends Preference {
             value = getSharedPreferences().getBoolean(getKey(), false);
 
         mSwitchState = value;
-        Log.d(LOG_TAG, "onSetInitialValue: value = " + value);
+        //Log.d(LOG_TAG, "onSetInitialValue: value = " + value);
     }
 
     @Override
     protected Object onGetDefaultValue (TypedArray a, int index) {
-        Log.d(LOG_TAG, "onGetDefaultValue: " + index + ", " + a);
+        //Log.d(LOG_TAG, "onGetDefaultValue: " + index + ", " + a);
         return a.getBoolean(index, false);
     }
 
     protected void setChecked(boolean checked) {
-        Log.d(LOG_TAG, "setChecked: " + checked);
+        //Log.d(LOG_TAG, "setChecked: " + checked);
         mSwitchState = checked;
         setSelectable(mSwitchState);
         mSwitch.setChecked(mSwitchState);

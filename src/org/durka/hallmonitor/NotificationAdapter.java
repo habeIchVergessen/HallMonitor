@@ -27,7 +27,7 @@ public class NotificationAdapter extends BaseAdapter {
 	
 	public void update(StatusBarNotification[] n) {
 		notifs = n;
-		Log.d("NA.upd", "update: " + Integer.toString(n.length) + " notifications");
+		Log_d("NA.upd", "update: " + Integer.toString(n.length) + " notifications");
 	}
 
 	@Override
@@ -84,5 +84,8 @@ public class NotificationAdapter extends BaseAdapter {
         return Settings.Global.getInt(that.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, 0) != 0;
     }
 
-
+    private void Log_d(String tag, String message) {
+        if (DefaultActivity.isDebug())
+            Log.d(tag, message);
+    }
 }
