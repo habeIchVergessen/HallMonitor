@@ -14,6 +14,17 @@
  */
 package org.durka.hallmonitor;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import android.app.Service;
+import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.service.notification.NotificationListenerService;
@@ -23,6 +34,11 @@ import android.service.notification.StatusBarNotification;
 public class NotificationService extends NotificationListenerService {
 	
 	public static NotificationService that = null;
+	
+	private final List<String> blacklist = new ArrayList<String>() {{
+			add("net.cactii.flash2"); // we have our own flashlight UI
+			add("android");           // this covers the keyboard selection notification, but does it clobber others too? TODO
+	}};
 	
 	@Override
 	public void onCreate() {
@@ -56,4 +72,18 @@ public class NotificationService extends NotificationListenerService {
         if (PreferenceManager.getDefaultSharedPreferences(getBaseContext()).getBoolean("pref_dev_opts_debug", false))
             Log.d(tag, message);
     }
+	@Override
+	public StatusBarNotification[] getActiveNotifications() {
+		StatusBarNotification[] notifs = super.getActiveNotifications();
+		
+		List<StatusBarNotification> acc = new ArrayList<StatusBarNotification>(notifs.length);
+		for (StatusBarNotification sbn : notifs) {
+			Log.d("NS-gAN", sbn.getPackageName());
+			if (!blacklist.contains(sbn.getPackageName())) {
+				acc.add(sbn);
+			}
+		}
+		return acc.toArray(new StatusBarNotification[acc.size()]);
+	}
+
 }
