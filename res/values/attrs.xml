@@ -23,4 +23,10 @@
        	<attr name="colorPickerBorderColor" format="color|reference" />
     </declare-styleable>
 
+    <declare-styleable name="ComponentStyleable">
+        <attr name="defaultLayoutResourceId" format="reference"/>
+        <attr name="defaultLayoutClassName" format="string"/>
+        <attr name="debugMode" format="boolean"/>
+    </declare-styleable>
+
 </resources>

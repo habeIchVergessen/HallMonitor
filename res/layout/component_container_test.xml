@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <view
+        android:layout_width="315dp"
+        android:layout_height="125dp"
+        android:layout_marginTop="12dp"
+        android:id="@+id/componentContainer"
+        class="org.durka.hallmonitor.ComponentFramework$Container"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        app:defaultLayoutClassName="ComponentDefaultDurka"
+        app:debugMode="true">
+
+        <view
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/componentPhone"
+            class="org.durka.hallmonitor.ComponentPhone"
+            app:debugMode="true"
+        />
+
+
+    </view>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="show componentPhone"
+        android:id="@+id/button"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="116dp"
+        android:onClick="onShowComponentPhone" />
+
+</RelativeLayout>

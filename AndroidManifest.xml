@@ -95,6 +95,23 @@
                 <action android:name="android.intent.action.HEADSET_PLUG" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ComponentTestActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:noHistory="true"
+            android:screenOrientation="portrait">
+        </activity>
+        <activity
+            android:label="Hallmonitor (Component Test)"
+            android:name=".ComponentTestPreferences"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
     </application>
 

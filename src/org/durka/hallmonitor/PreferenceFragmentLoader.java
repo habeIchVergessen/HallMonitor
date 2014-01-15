@@ -191,6 +191,10 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
             // preferences_phone
         } else if (key.equals("pref_phone_controls_tts_delay")) {
             updatePhoneControlTtsDelay(prefs);
+        // preferences_phone
+        } else if (key.equals("prefDefaultLayoutClassName")) {
+            String pref = prefs.getString("prefDefaultLayoutClassName", "");
+            findPreference("prefDefaultLayoutClassName").setSummary((pref.equals("") ? "<default>" : pref));
         }
 
         // phone control

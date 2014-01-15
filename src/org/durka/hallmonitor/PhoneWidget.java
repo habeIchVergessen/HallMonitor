@@ -31,7 +31,7 @@ public class PhoneWidget extends RelativeLayout {
     public final static String INTENT_phoneWidgetInitialized = "phoneWidgetInitialized";
     public final static String INTENT_phoneWidgetTtsNotified = "phoneWidgetTtsNotified";
 
-    private int mPhoneResourceId = R.layout.phone_widget;
+    private int mPhoneResourceId = R.layout.component_phone_habe_ich_vergessen_layout;
     private Context mContext = null;
 
     private OnScreenActionListener mLockScreenListener = null;
@@ -80,7 +80,7 @@ public class PhoneWidget extends RelativeLayout {
         Log_d(LOG_TAG, "setupLayout: ");
         if (mPhoneResourceId != -1 && !isInEditMode()) {
             // options
-            mPhoneWidget = (GridLayout)getActivity().getLayoutInflater().inflate(R.layout.phone_widget, this, false);
+            mPhoneWidget = (GridLayout)getActivity().getLayoutInflater().inflate(R.layout.component_phone_habe_ich_vergessen_layout, this, false);
             mPhoneWidget.setBackgroundColor(0x00000000); // clear background color
             this.addView(mPhoneWidget);
 

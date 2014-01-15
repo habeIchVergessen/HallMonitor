@@ -18,6 +18,8 @@
         android:keepScreenOn="true" >
 
         <!-- camera -->
+        <include layout="@layout/component_camera_layout" />
+        <!--
         <RelativeLayout
 
             android:id="@+id/default_content_camera"
@@ -53,8 +55,11 @@
 	            android:layout_alignParentRight="true" />
         
         </RelativeLayout>
+        -->
 
         <!-- default_alarm_content -->
+        <include layout="@layout/component_alarm_layout" />
+        <!--
         <RelativeLayout
             android:id="@+id/default_content_alarm"
             android:layout_width="match_parent"
@@ -83,8 +88,11 @@
 	       	    android:onClick="sendDismiss" />
 	       	
        	</RelativeLayout>
+       	-->
 
         <!-- default_content_phone -->
+        <include layout="@layout/component_phone_durka_layout" />
+        <!--
         <RelativeLayout
             android:id="@+id/default_content_phone"
             android:layout_width="match_parent"
@@ -122,8 +130,11 @@
 	       	    android:onClick="sendPickUp" />
 	       	
         </RelativeLayout>
+        -->
 
         <!-- default_content_normal -->
+        <include layout="@layout/component_default_durka_layout" />
+        <!--
         <RelativeLayout
             android:id="@+id/default_content_normal"
             android:layout_width="match_parent"
@@ -167,7 +178,6 @@
 
            </RelativeLayout>
 
-            <!-- notifications panel -->
             <GridView
                 android:id="@+id/default_icon_container"
                 android:layout_width="wrap_content"
@@ -209,6 +219,7 @@
                 android:src="@drawable/ic_notification"
                 android:visibility="invisible" />
         </RelativeLayout>
+        -->
 
         <!-- phone widget -->
         <org.durka.hallmonitor.PhoneWidget

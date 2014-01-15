@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/default_content_normal"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="center"
+    android:gravity="center">
+
+    <!-- default_content_normal -->
+    <RelativeLayout
+        android:id="@+id/default_widget"
+        android:layout_width="match_parent"
+        android:layout_height="75dp"
+        android:gravity="center"
+        android:layout_alignParentStart="false">
+
+        <TextClock
+            android:id="@+id/default_text_clock"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:keepScreenOn="false"
+            android:textColor="#33b5e5"
+            android:gravity="center_vertical|center_horizontal"
+            android:editable="false"
+            android:singleLine="false"
+            android:maxLines="2"
+            android:format12Hour="HH:mm\ndd.MM.yyyy" />
+
+        <ImageView
+            android:id="@+id/default_battery_picture"
+            android:layout_width="13dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="3dp"
+            android:layout_marginRight="10dp"
+            android:src="@drawable/stat_sys_battery"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentLeft="false"
+            android:layout_alignParentRight="true"
+            android:adjustViewBounds="false"
+            android:layout_marginBottom="10dp" />
+
+    </RelativeLayout>
+
+    <!-- notifications panel -->
+    <GridView
+        android:id="@+id/default_icon_container"
+        android:layout_width="wrap_content"
+        android:layout_height="30dp"
+        android:horizontalSpacing="4dp"
+        android:numColumns="0"
+        android:choiceMode="none"
+        android:layout_marginTop="10dp"
+        android:scrollbars="none"
+        android:columnWidth="24dp"
+        android:padding="0dp"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:stretchMode="columnWidth"
+        android:stackFromBottom="false"
+        android:layout_alignParentBottom="false"
+        android:layout_below="@+id/default_widget" />
+
+    <ImageButton
+        android:id="@+id/torchbutton"
+        style="?android:attr/buttonBarButtonStyle"
+        android:layout_width="40dp"
+        android:layout_height="wrap_content"
+        android:onClick="sendToggleTorch"
+        android:src="@drawable/ic_appwidget_torch_off"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="false"
+        android:layout_alignParentEnd="false"
+        android:visibility="invisible" />
+
+    <ImageButton
+        android:id="@+id/camerabutton"
+        style="?android:attr/buttonBarButtonStyle"
+        android:layout_width="30dp"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/default_icon_container"
+        android:layout_toLeftOf="@+id/torchbutton"
+        android:onClick="camera_start"
+        android:src="@drawable/ic_notification"
+        android:visibility="invisible" />
+
+</RelativeLayout>
