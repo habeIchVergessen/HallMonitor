@@ -436,8 +436,8 @@ public class Functions {
 			da.refreshDisplay();
 			if (should_close) close_cover(da);
 		}
-		
-		public static void setup_notifications() {
+
+        public static void setup_notifications() {
 			StatusBarNotification[] notifs = NotificationService.that.getActiveNotifications();
 			Log_d("DA-oC", Integer.toString(notifs.length) + " notifications");
 			GridView grid = (GridView)defaultActivity.findViewById(R.id.default_icon_container);

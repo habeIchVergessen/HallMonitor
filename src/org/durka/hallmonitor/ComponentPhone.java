@@ -8,10 +8,12 @@ public class ComponentPhone extends ComponentFramework.Layout {
 
     private final String LOG_TAG = "ComponentPhone";
 
+    private boolean mInitialized = false;
+
     public ComponentPhone(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
 
-        Log_d(LOG_TAG, "onCreate");
+        Log_d(LOG_TAG, "ComponentPhone");
 
         // setup layout resource id (if not loaded via styled attrs)
         if (mLayoutResId == UNDEFINED_LAYOUT) {
@@ -20,15 +22,8 @@ public class ComponentPhone extends ComponentFramework.Layout {
         }
     }
 
-    @Override
-    public boolean onTouchEvent(MotionEvent motionEvent)
-    {
-        Log_d(LOG_TAG, "action index: " + motionEvent.getActionIndex());
-
-        return true;
-    }
-
     protected void onInitComponent() {
+        mInitialized = true;
         Log_d(LOG_TAG, "onInitComponent");
     }
 

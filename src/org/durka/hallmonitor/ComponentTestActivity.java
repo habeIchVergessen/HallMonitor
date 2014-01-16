@@ -23,7 +23,6 @@ public class ComponentTestActivity extends Activity {
 
         mComponentContainer = (ComponentFramework.Container)findViewById(R.id.componentContainer);
         mComponentDefault = mComponentContainer.getDefaultLayout();
-        mComponentPhone = (ComponentPhone)findViewById(R.id.componentPhone);
 
         Log_d(LOG_TAG, "onCreate: " + (mComponentContainer == null ? "null" : getResources().getResourceName(mComponentContainer.getId())) + ", " + (mComponentPhone == null ? "null" : getResources().getResourceName(mComponentPhone.getId())));
     }
@@ -67,11 +66,24 @@ public class ComponentTestActivity extends Activity {
     }
 
     public void onShowComponentPhone(View view) {
-        if (mComponentPhone != null) {
-            if (!mComponentPhone.isShown())
-                mComponentPhone.setVisibility(View.VISIBLE);
+        ComponentFramework.Layout componentPhone = mComponentContainer.getLayoutByResId(R.id.componentPhone);
+
+        if (componentPhone != null) {
+            if (!componentPhone.isShown())
+                componentPhone.setVisibility(View.VISIBLE);
             else
-                mComponentPhone.setVisibility(View.INVISIBLE);
+                componentPhone.setVisibility(View.INVISIBLE);
+        }
+    }
+
+    public void onShowComponentCamera(View view) {
+        ComponentFramework.Layout componentCamera = mComponentContainer.getLayoutByResId(R.id.componentCamera);
+
+        if (componentCamera != null) {
+            if (!componentCamera.isShown())
+                componentCamera.setVisibility(View.VISIBLE);
+            else
+                componentCamera.setVisibility(View.INVISIBLE);
         }
     }
 

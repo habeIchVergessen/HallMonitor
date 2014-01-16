@@ -170,13 +170,6 @@ public class ComponentFramework {
             }
 
             addView(mLayoutView);
-            mLayoutView.setVisibility(VISIBLE);
-        }
-
-        @Override
-        protected void onAttachedToWindow() {
-            if (getDefaultLayout() != null)
-                getDefaultLayout().setVisibility(VISIBLE);
         }
 
         private Layout initLayout(String className) {
@@ -202,7 +195,7 @@ public class ComponentFramework {
         }
 
         public Layout getDefaultLayout() {
-            return (Layout)mLayoutView;
+            return (mLayoutView instanceof Layout ? (Layout)mLayoutView : null);
         }
 
         /*
@@ -240,10 +233,6 @@ public class ComponentFramework {
                 return;
             }
 
-            // invisible by default (exclude Warning)
-            if (!(view instanceof WarningLayout))
-                view.setVisibility((isInEditMode() ? VISIBLE : INVISIBLE));
-
             super.addView(view, index, (layoutParams != null ? layoutParams : new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)));
         }
 
@@ -254,7 +243,16 @@ public class ComponentFramework {
         }
 
         @Override
-        public void setDebugMode(boolean debugMode) {
+        final protected void onFinishInflate() {
+            super.onFinishInflate();
+
+            Log.d(LOG_TAG, "onFinishInflate: ");
+            if (mLayoutView != null)
+                mLayoutView.setVisibility(VISIBLE);
+        }
+
+        @Override
+        final public void setDebugMode(boolean debugMode) {
             Log_d(LOG_TAG, "setDebugMode: " + debugMode + ", #" + getChildCount());
             super.setDebugMode(debugMode);
 
@@ -269,6 +267,18 @@ public class ComponentFramework {
             }
         }
 
+        final Layout getLayoutByResId(int resourceId) {
+            Layout result = null;
+
+            for (int idx=0; idx<getChildCount(); idx++)
+                if (getChildAt(idx).getId() == resourceId) {
+                    if (getChildAt(idx) instanceof Layout)
+                        result = (Layout)getChildAt(idx);
+                    break;
+                }
+
+            return result;
+        }
     }
 
     private static class WarningLayout extends Container {
@@ -315,25 +325,31 @@ public class ComponentFramework {
 
         private final String LOG_TAG = "ComponentFramework.Layout";
 
+        private boolean mDeflateOnClose = true;
+
         public Layout(Context context) {
             super(context);
 
             Log_d(LOG_TAG, "Layout");
+            setVisibility(INVISIBLE);
         }
 
         public Layout(Context context, AttributeSet attributeSet) {
             super(context, attributeSet);
 
             Log_d(LOG_TAG, "Layout");
+            setVisibility(INVISIBLE);
+        }
+
+        public Layout(Context context, AttributeSet attributeSet, int defStyle) {
+            super(context, attributeSet, defStyle);
+
+            Log_d(LOG_TAG, "Layout");
+            setVisibility(INVISIBLE);
         }
 
         @Override
-        public void setId(int id) {
-            super.setId(id);
-      }
-
-        @Override
-        public void setVisibility(int visibility) {
+        final public void setVisibility(int visibility) {
             Log_d(LOG_TAG, "setVisibility");
             switch (visibility) {
                 case VISIBLE:
@@ -343,12 +359,15 @@ public class ComponentFramework {
 
                     if (mLayoutView != null && onOpenComponent())
                         super.setVisibility(VISIBLE);
+                    else
+                        clearChildViews();
                     break;
                 case INVISIBLE:
                 case GONE:
                     if (mLayoutView != null)
                         onCloseComponent();
                     super.setVisibility(INVISIBLE);
+                    clearChildViews();
                     break;
             }
         }
@@ -369,7 +388,14 @@ public class ComponentFramework {
             return (mLayoutView != null);
         }
 
-        protected void setLayoutResourceId(int layoutResId) {
+        private void clearChildViews() {
+            if (mDeflateOnClose) {
+                removeAllViews();
+                mLayoutView = null;
+            }
+        }
+
+        final protected void setLayoutResourceId(int layoutResId) {
             // reading parameter defaultLayoutResourceId
             try {
                     int resId = layoutResId;
@@ -379,10 +405,41 @@ public class ComponentFramework {
             }
         }
 
-        protected abstract void onInitComponent();
-        protected abstract boolean onOpenComponent();
-        protected abstract void onCloseComponent();
+        /**
+         * <br/>
+         * remove all views after onCloseComponent was called<br/>
+         * <br/>
+         * default: true<br/>
+         * <br/>
+         * @param deflateOnClose boolean
+         */
+        final protected void setDeflateOnClose(boolean deflateOnClose) {
+            mDeflateOnClose = deflateOnClose;
+        }
 
+        final protected Container getContainer() {
+            return (getParent() instanceof Container ? (Container)getParent() : null);
+        }
+
+        /**
+         * <br/>
+         * called after layout inflate finished<br/>
+         * <br/>
+         */
+        protected abstract void onInitComponent();
+        /**
+         * <br/>
+         * called after layout inflate finished<br/>
+         * <br/>
+         * @return true to show layout. otherwise is invisible
+         */
+        protected abstract boolean onOpenComponent();
+        /**
+         * <br/>
+         * called before layout is closed<br/>
+         * <br/>
+         */
+        protected abstract void onCloseComponent();
     }
 
     public static class DefaultLayout extends Layout {
