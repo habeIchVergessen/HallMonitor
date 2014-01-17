@@ -1,11 +1,10 @@
-package org.durka.hallmonitor;
+package org.durka.hallmonitor_framework_test;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
 import android.preference.PreferenceManager;
@@ -14,7 +13,6 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
 
 import java.lang.reflect.Constructor;
 

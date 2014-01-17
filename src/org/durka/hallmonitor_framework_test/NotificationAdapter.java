@@ -1,4 +1,4 @@
-package org.durka.hallmonitor;
+package org.durka.hallmonitor_framework_test;
 
 import android.content.Context;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -8,7 +8,6 @@ import android.service.notification.StatusBarNotification;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;

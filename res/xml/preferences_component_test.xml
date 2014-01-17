@@ -37,8 +37,8 @@
             android:summary="select layout above and start preview">
             <intent
                 android:action="android.intent.action.VIEW"
-                android:targetPackage="org.durka.hallmonitor"
-                android:targetClass="org.durka.hallmonitor.ComponentTestActivity">
+                android:targetPackage="org.durka.hallmonitor_framework_test"
+                android:targetClass="org.durka.hallmonitor_framework_test.ComponentTestActivity">
             </intent>
         </PreferenceScreen>
     </PreferenceCategory>

@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:visibility="invisible" >
 
-    <org.durka.hallmonitor.CameraPreview
+    <org.durka.hallmonitor_framework_test.CameraPreview
         android:id="@+id/default_camera"
         android:layout_width="125dp"
         android:layout_height="125dp"

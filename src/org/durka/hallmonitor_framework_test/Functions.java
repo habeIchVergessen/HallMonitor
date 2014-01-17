@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.durka.hallmonitor;
+package org.durka.hallmonitor_framework_test;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -33,19 +33,12 @@ import android.app.NotificationManager;
 import android.app.admin.DevicePolicyManager;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager.NameNotFoundException;
-import android.content.res.Resources.NotFoundException;
 import android.os.Build;
-import android.database.Cursor;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
-import android.provider.BaseColumns;
-import android.provider.ContactsContract;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 import android.view.View;

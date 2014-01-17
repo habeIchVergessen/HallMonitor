@@ -30,7 +30,7 @@
 
 package afzkl.development.colorpickerview.view;
 
-import org.durka.hallmonitor.R;
+import org.durka.hallmonitor_framework_test.R;
 
 import afzkl.development.colorpickerview.drawable.AlphaPatternDrawable;
 import android.content.Context;

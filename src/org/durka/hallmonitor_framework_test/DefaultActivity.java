@@ -1,4 +1,4 @@
-package org.durka.hallmonitor;
+package org.durka.hallmonitor_framework_test;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -11,9 +11,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Typeface;
 import android.media.AudioManager;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
-import android.graphics.drawable.Drawable;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;

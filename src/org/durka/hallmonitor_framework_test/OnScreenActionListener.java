@@ -1,6 +1,4 @@
-package org.durka.hallmonitor;
-
-import android.view.ViewGroup;
+package org.durka.hallmonitor_framework_test;
 
 public interface OnScreenActionListener {
     public void onWakeUpScreen();

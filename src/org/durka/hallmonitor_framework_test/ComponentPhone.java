@@ -1,8 +1,7 @@
-package org.durka.hallmonitor;
+package org.durka.hallmonitor_framework_test;
 
 import android.content.Context;
 import android.util.AttributeSet;
-import android.view.MotionEvent;
 
 public class ComponentPhone extends ComponentFramework.Layout {
 
@@ -25,6 +24,7 @@ public class ComponentPhone extends ComponentFramework.Layout {
     protected void onInitComponent() {
         mInitialized = true;
         Log_d(LOG_TAG, "onInitComponent");
+
     }
 
     protected boolean onOpenComponent() {

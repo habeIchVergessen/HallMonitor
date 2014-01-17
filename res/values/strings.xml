@@ -20,6 +20,7 @@
 
     <!-- random stuff -->
     <string name="app_name">Hall Monitor</string>
+    <string name="app_name_framework">Hall Monitor (Framework Test)</string>
     <string name="hall_file">/sys/devices/virtual/sec/sec_key/hall_detect</string>
     <string name="title_activity_configuration">Configuration</string>
     <string name="action_settings">Settings</string>

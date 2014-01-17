@@ -97,16 +97,16 @@
         android:summary="@string/pref_alarm_controls_summary"
         android:defaultValue="false" />
 
-    <org.durka.hallmonitor.PreferenceSwitchable
+    <org.durka.hallmonitor_framework_test.PreferenceSwitchable
         android:key="pref_phone_controls_user"
         android:title="@string/pref_phone_screen"
         android:summary="@string/pref_phone_screen_summary"
-        android:fragment="org.durka.hallmonitor.PreferenceFragmentLoader"
+        android:fragment="org.durka.hallmonitor_framework_test.PreferenceFragmentLoader"
         android:defaultValue="false">
         <extra
             android:name="resource"
             android:value="preferences_phone" />
-    </org.durka.hallmonitor.PreferenceSwitchable>
+    </org.durka.hallmonitor_framework_test.PreferenceSwitchable>
 
     <Preference
         android:title=""

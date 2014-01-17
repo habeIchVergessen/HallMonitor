@@ -11,7 +11,7 @@
         android:layout_height="125dp"
         android:layout_marginTop="12dp"
         android:id="@+id/componentContainer"
-        class="org.durka.hallmonitor.ComponentFramework$Container"
+        class="org.durka.hallmonitor_framework_test.ComponentFramework$Container"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
         app:defaultLayoutClassName="ComponentDefaultDurka"
@@ -21,7 +21,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:id="@+id/componentPhone"
-            class="org.durka.hallmonitor.ComponentPhone"
+            class="org.durka.hallmonitor_framework_test.ComponentPhone"
             app:debugMode="true"
         />
 
@@ -29,7 +29,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:id="@+id/componentCamera"
-            class="org.durka.hallmonitor.ComponentCamera"
+            class="org.durka.hallmonitor_framework_test.ComponentCamera"
             app:debugMode="true"
             />
 

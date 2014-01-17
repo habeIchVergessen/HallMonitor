@@ -1,4 +1,4 @@
-package org.durka.hallmonitor;
+package org.durka.hallmonitor_framework_test;
 
 import android.app.Activity;
 import android.app.AlertDialog;

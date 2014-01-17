@@ -1,4 +1,4 @@
-package org.durka.hallmonitor;
+package org.durka.hallmonitor_framework_test;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -34,7 +34,7 @@ public class ComponentCamera extends ComponentFramework.Layout {
             @Override
             public void onClick(View view) {
                 Log.d(LOG_TAG, "onClick: R.id.default_camera visible doesn't work properly");
-                //((CameraPreview)findViewById(R.id.default_camera)).capture();
+                ((CameraPreview)findViewById(R.id.default_camera)).capture();
             }
         });
         mCameraBackButton.setOnClickListener(new OnClickListener() {
@@ -54,7 +54,7 @@ public class ComponentCamera extends ComponentFramework.Layout {
             getChildAt(0).setVisibility(VISIBLE);
             if (cameraLayout != null) {
                 Log.d(LOG_TAG, "onOpenComponent: R.id.default_camera visible doesn't work properly");
-                //cameraLayout.findViewById(R.id.default_camera).setVisibility(VISIBLE);
+                cameraLayout.findViewById(R.id.default_camera).setVisibility(VISIBLE);
             }
         } catch (Exception e) {
         }

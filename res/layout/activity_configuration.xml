@@ -21,7 +21,7 @@
     android:layout_alignParentLeft="true"
     android:layout_alignParentTop="true">
     
-    <fragment class="org.durka.hallmonitor.ConfigurationFragment"
+    <fragment class="org.durka.hallmonitor_framework_test.ConfigurationFragment"
             android:id="@+id/configfrag"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />

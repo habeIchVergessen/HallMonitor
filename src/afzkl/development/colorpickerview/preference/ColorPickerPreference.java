@@ -1,6 +1,6 @@
 package afzkl.development.colorpickerview.preference;
 
-import org.durka.hallmonitor.R;
+import org.durka.hallmonitor_framework_test.R;
 
 import afzkl.development.colorpickerview.view.ColorPanelView;
 import afzkl.development.colorpickerview.view.ColorPickerView;

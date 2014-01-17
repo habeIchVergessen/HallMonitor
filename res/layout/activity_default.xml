@@ -222,12 +222,12 @@
         -->
 
         <!-- phone widget -->
-        <org.durka.hallmonitor.PhoneWidget
+        <org.durka.hallmonitor_framework_test.PhoneWidget
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="invisible">
 
-        </org.durka.hallmonitor.PhoneWidget>
+        </org.durka.hallmonitor_framework_test.PhoneWidget>
 
     </RelativeLayout>
 
