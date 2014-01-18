@@ -22,7 +22,6 @@
         android:title="@string/pref_default_bgcolor"
         android:summary="@string/pref_default_bgcolor_summary"
         android:defaultValue="0xFFA5C8F2" />
-
     <afzkl.development.colorpickerview.preference.ColorPickerPreference
         android:key="pref_default_fgcolor"
         android:title="@string/pref_default_fgcolor"
