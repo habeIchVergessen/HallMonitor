@@ -18,11 +18,14 @@ import java.lang.reflect.Constructor;
 
 public class ComponentFramework {
 
-    public interface OnComponentListener {
-        public void initComponent();
-        public void openComponent();
-        public void closeComponent();
-        public void setDebugMode(boolean debugMode);
+    public interface OnPauseResumeListener {
+        public void onPause();
+        public void onResume();
+    }
+
+    public interface OnScreenOffTimerListener {
+        public boolean onStartScreenOffTimer();
+        public boolean onStopScreenOffTimer();
     }
 
     public static class Child extends RelativeLayout {
@@ -106,6 +109,13 @@ public class ComponentFramework {
             return PreferenceManager.getDefaultSharedPreferences(getContext()).getInt(prefName, defaultValue);
         }
 
+        protected boolean getPrefBoolean(String prefName, boolean defaultValue) {
+            if (isInEditMode())
+                return defaultValue;
+
+            return PreferenceManager.getDefaultSharedPreferences(getContext()).getBoolean(prefName, defaultValue);
+        }
+
         protected String getPrefString(String prefName) {
             return getPrefString(prefName, "");
         }
@@ -126,7 +136,7 @@ public class ComponentFramework {
         }
     }
 
-    public static class Container extends Child {
+    public static class Container extends Child implements OnPauseResumeListener {
 
         private final String LOG_TAG = "ComponentFramework.Container";
 
@@ -234,12 +244,6 @@ public class ComponentFramework {
             super.addView(view, index, (layoutParams != null ? layoutParams : new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)));
         }
 
-        private void addViewForced(View view) {
-            Log_d(LOG_TAG, "addViewForced: view");
-
-            super.addView(view);
-        }
-
         @Override
         final protected void onFinishInflate() {
             super.onFinishInflate();
@@ -258,7 +262,7 @@ public class ComponentFramework {
             for (int idx=0; idx<getChildCount(); idx++) {
                 if (getChildAt(idx) instanceof WarningLayout)
                     ((WarningLayout)getChildAt(idx)).setDebugMode(debugMode);
-                if (getChildAt(idx) instanceof View)
+                if (getChildAt(idx) instanceof Layout)
                     ((Layout)getChildAt(idx)).setDebugMode(debugMode);
                 if (getChildAt(idx) instanceof MenuLayout)
                     ((MenuLayout)getChildAt(idx)).setDebugMode(debugMode);
@@ -276,6 +280,32 @@ public class ComponentFramework {
                 }
 
             return result;
+        }
+
+        public void onPause() {
+            // propagate to child views
+            for (int idx=0; idx<getChildCount(); idx++) {
+                if (getChildAt(idx) instanceof Layout) {
+                    Layout layout = (Layout)getChildAt(idx);
+
+                    if (OnPauseResumeListener.class.isAssignableFrom(layout.getClass()) && layout.isShown())
+                        ((OnPauseResumeListener)layout).onPause();
+                }
+            }
+        }
+
+        public void onResume() {
+            setDebugMode(getPrefBoolean("pref_dev_opts_debug", false));
+
+            // propagate to child views
+            for (int idx=0; idx<getChildCount(); idx++) {
+                if (getChildAt(idx) instanceof Layout) {
+                    Layout layout = (Layout)getChildAt(idx);
+
+                    if (OnPauseResumeListener.class.isAssignableFrom(layout.getClass()) && layout.isShown())
+                        ((OnPauseResumeListener)layout).onResume();
+                }
+            }
         }
     }
 
@@ -317,6 +347,14 @@ public class ComponentFramework {
         public void addView(View view, int index, ViewGroup.LayoutParams layoutParams) {
             return;
         }
+
+        @Override
+        public void onPause() {
+        }
+
+        @Override
+        public void onResume() {
+        }
     }
 
     public static abstract class Layout extends Child {
@@ -355,15 +393,20 @@ public class ComponentFramework {
                     if (mLayoutView == null && !initLayout())
                         return;
 
-                    if (mLayoutView != null && onOpenComponent())
+                    if (mLayoutView != null && onOpenComponent()) {
+                        if (OnPauseResumeListener.class.isAssignableFrom(mLayoutView.getClass()))
+                            ((OnPauseResumeListener)mLayoutView).onResume();
                         super.setVisibility(VISIBLE);
-                    else
+                    } else
                         clearChildViews();
                     break;
                 case INVISIBLE:
                 case GONE:
-                    if (mLayoutView != null)
+                    if (mLayoutView != null) {
+                        if (OnPauseResumeListener.class.isAssignableFrom(mLayoutView.getClass()))
+                            ((OnPauseResumeListener)mLayoutView).onPause();
                         onCloseComponent();
+                    }
                     super.setVisibility(INVISIBLE);
                     clearChildViews();
                     break;
@@ -438,6 +481,42 @@ public class ComponentFramework {
          * <br/>
          */
         protected abstract void onCloseComponent();
+
+        /**
+         * <br/>
+         * notify activity about the layout request for starting screen off timer
+         * <br/>
+         * @return result from activity method call or false if activity doesn't implement the listener
+         */
+        protected boolean startScreenOffTimer() {
+            boolean result = false;
+
+            if (getActivity() != null) {
+                if (OnScreenOffTimerListener.class.isAssignableFrom(getActivity().getClass())) {
+                    result = ((OnScreenOffTimerListener)getActivity()).onStartScreenOffTimer();
+                }
+            }
+
+            return result;
+        }
+
+        /**
+         * <br/>
+         * notify activity about the layout request for stopping screen off timer
+         * <br/>
+         * @return result from activity method call or false if activity doesn't implement the listener
+         */
+        protected boolean stopScreenOffTimer() {
+            boolean result = false;
+
+            if (getActivity() != null) {
+                if (OnScreenOffTimerListener.class.isAssignableFrom(getActivity().getClass())) {
+                    result = ((OnScreenOffTimerListener)getActivity()).onStopScreenOffTimer();
+                }
+            }
+
+            return result;
+        }
     }
 
     public static class DefaultLayout extends Layout {
@@ -463,7 +542,7 @@ public class ComponentFramework {
         }
     }
 
-    public static abstract class MenuLayout extends Child implements OnComponentListener {
+    public static abstract class MenuLayout extends Child {
 
         private final String LOG_TAG = "ComponentFramework.Menu";
 

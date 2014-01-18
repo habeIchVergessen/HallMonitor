@@ -2,10 +2,11 @@ package org.durka.hallmonitor_framework_test;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 
-public class ComponentTestActivity extends Activity {
+public class ComponentTestActivity extends Activity implements ComponentFramework.OnScreenOffTimerListener {
 
     private final String LOG_TAG = "ComponentTestActivity";
 
@@ -24,6 +25,9 @@ public class ComponentTestActivity extends Activity {
         mComponentContainer = (ComponentFramework.Container)findViewById(R.id.componentContainer);
         mComponentDefault = mComponentContainer.getDefaultLayout();
 
+        // turn debug on
+        PreferenceManager.getDefaultSharedPreferences(getBaseContext()).edit().putBoolean("pref_dev_opts_debug", true).commit();
+
         Log_d(LOG_TAG, "onCreate: " + (mComponentContainer == null ? "null" : getResources().getResourceName(mComponentContainer.getId())) + ", " + (mComponentPhone == null ? "null" : getResources().getResourceName(mComponentPhone.getId())));
     }
 
@@ -39,6 +43,9 @@ public class ComponentTestActivity extends Activity {
         super.onPause();
 
         Log_d(LOG_TAG, "onPause");
+
+        // propagate to layout's
+        mComponentContainer.onPause();
     }
 
     @Override
@@ -47,8 +54,8 @@ public class ComponentTestActivity extends Activity {
 
         Log_d(LOG_TAG, "onResume");
 
-        // set debug to all child views
-        //setDebugMode(PreferenceManager.getDefaultSharedPreferences(getBaseContext()).getBoolean("pref_dev_opts_debug", false));
+        // propagate to layout's
+        mComponentContainer.onResume();
     }
 
     @Override
@@ -87,14 +94,19 @@ public class ComponentTestActivity extends Activity {
         }
     }
 
-    // helper
-    private void setDebugMode(boolean debugMode) {
-        mDebug = debugMode;
-        // provide to all child views
-        if (mComponentContainer != null)
-            mComponentContainer.setDebugMode(mDebug);
+    public boolean onStartScreenOffTimer() {
+        Log.d(LOG_TAG, "onStartScreenOffTimer");
+
+        return true;
     }
 
+    public boolean onStopScreenOffTimer() {
+        Log.d(LOG_TAG, "onStopScreenOffTimer");
+
+        return true;
+    }
+
+    // helper
     private void Log_d(String tag, String message) {
         if (mDebug)
             Log.d(tag, message);

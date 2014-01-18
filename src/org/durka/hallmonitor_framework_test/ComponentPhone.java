@@ -32,10 +32,14 @@ public class ComponentPhone extends ComponentFramework.Layout {
 
         int bgColor = getPrefInt("pref_default_bgcolor", 0xff000000);
 
+        stopScreenOffTimer();
+
         return true;
     }
 
     protected void onCloseComponent() {
         Log_d(LOG_TAG, "onCloseComponent");
+
+        startScreenOffTimer();
     }
 }
