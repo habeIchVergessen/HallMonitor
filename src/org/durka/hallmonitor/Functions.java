@@ -59,13 +59,12 @@ import android.widget.Toast;
  */
 public class Functions {
 	
+	// callback identifiers for startActivityForResult, used by the preference screen
 	public static final int DEVICE_ADMIN_WAITING = 42;
-	
-	//needed for the call backs from the widget picker
-	//pick is the call back after picking a widget, configure is the call back after
-	//widget configuration
 	public static final int REQUEST_PICK_APPWIDGET = 9;
 	public static final int REQUEST_CONFIGURE_APPWIDGET = 5;
+	public static final int NOTIFICATION_LISTENER_ON = 0xDEAD;
+	public static final int NOTIFICATION_LISTENER_OFF = 0xBEEF;
 	
     //this action will let us toggle the flashlight
     public static final String TOGGLE_FLASHLIGHT = "net.cactii.flash2.TOGGLE_FLASHLIGHT";
@@ -281,6 +280,7 @@ public class Functions {
 			DevicePolicyManager dpm = (DevicePolicyManager) act.getSystemService(Context.DEVICE_POLICY_SERVICE);
 			ComponentName me = new ComponentName(act, AdminReceiver.class);
 			if (!dpm.isAdminActive(me)) {
+				Log_d("F.Act.start_service", "launching dpm overlay");
 				Intent coup = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
 				coup.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, me);
 				coup.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, act.getString(R.string.admin_excuse));
@@ -305,6 +305,17 @@ public class Functions {
 			if (dpm.isAdminActive(me)) dpm.removeActiveAdmin(me);
 		}
 		
+		public static void do_notifications(Activity act, boolean enable) {
+			
+			if (enable && !Is.service_running(act, NotificationService.class)) {
+				Toast.makeText(act, act.getString(R.string.notif_please_check), Toast.LENGTH_SHORT).show();
+				act.startActivityForResult(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"), NOTIFICATION_LISTENER_ON);
+			} else if (!enable && Is.service_running(act, NotificationService.class)) {
+				Toast.makeText(act, act.getString(R.string.notif_please_uncheck), Toast.LENGTH_SHORT).show();
+				act.startActivityForResult(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"), NOTIFICATION_LISTENER_OFF);
+			}
+			
+		}
 		
 		/**
 		 * Hand off to the HMAppWidgetManager to deal with registering new app widget.
@@ -525,8 +536,8 @@ public class Functions {
 		public static void activity_result(Context ctx, int request, int result, Intent data) {
 			Log_d(LOG_TAG + ".activity_result", "Activity result received: request=" + Integer.toString(request) + ", result=" + Integer.toString(result));
 			switch (request) {
-			  //call back for admin access request
-			  case DEVICE_ADMIN_WAITING:
+			//call back for admin access request
+			case DEVICE_ADMIN_WAITING:
 				if (result == Activity.RESULT_OK) {
 					// we asked to be an admin and the user clicked Activate
 					// (the intent receiver takes care of showing a toast)
@@ -541,11 +552,12 @@ public class Functions {
 							.edit()
 							.putBoolean("pref_enabled", false)
 							.commit();
-					Log_d(LOG_TAG + ".activity_result", "pref_enabled = " + Boolean.toString(PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_enabled", true)));
+					Log_d("F.Evt.activity_result", "pref_enabled = " + Boolean.toString(PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_enabled", true)));
+					
 				}
 				break;
-			  //call back for appwidget pick	
-			  case REQUEST_PICK_APPWIDGET:
+				//call back for appwidget pick	
+			case REQUEST_PICK_APPWIDGET:
 				//widget picked
 				if (result == Activity.RESULT_OK) {
 					//widget chosen so launch configurator
@@ -553,28 +565,60 @@ public class Functions {
 				} else {
 					//choose dialog cancelled so clean up
 					int appWidgetId = data.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
-			        if (appWidgetId != -1) {
-			        	hmAppWidgetManager.deleteAppWidgetId(appWidgetId);
+					if (appWidgetId != -1) {
+						hmAppWidgetManager.deleteAppWidgetId(appWidgetId);
+						PreferenceManager.getDefaultSharedPreferences(ctx)
+							.edit()
+							.putBoolean("pref_" + hmAppWidgetManager.currentWidgetType + "_widget", false) // FIXME this is a huge hack
+							.commit();
 					}
 				}
 				break;		
-			  //call back for appwidget configure
-			  case REQUEST_CONFIGURE_APPWIDGET:
+			//call back for appwidget configure
+			case REQUEST_CONFIGURE_APPWIDGET:
 				//widget configured
 				if (result == Activity.RESULT_OK) {
 					//widget configured successfully so create it
 					hmAppWidgetManager.createWidget(data, ctx);
 				} else {
 					//configure dialog cancelled so clean up
-					int appWidgetId = data.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
-			        if (appWidgetId != -1) {
-			        	hmAppWidgetManager.deleteAppWidgetId(appWidgetId);
+					if (data != null) {
+						int appWidgetId = data.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
+						if (appWidgetId != -1) {
+							hmAppWidgetManager.deleteAppWidgetId(appWidgetId);
+							PreferenceManager.getDefaultSharedPreferences(ctx)
+								.edit()
+								.putBoolean("pref_" + hmAppWidgetManager.currentWidgetType + "_widget", false) // FIXME this is a huge hack
+								.commit();
+						}
 					}
-				break;			
-			    }
+					
+				}
+				break;
+				
+			
+			case NOTIFICATION_LISTENER_ON:
+				Log.d("F-oAR", "return from checking the box");
+				if (!Functions.Is.service_running(ctx, NotificationService.class)) {
+                	Toast.makeText(ctx, ctx.getString(R.string.notif_left_unchecked), Toast.LENGTH_SHORT).show();
+                	PreferenceManager.getDefaultSharedPreferences(ctx)
+                		.edit()
+                		.putBoolean("pref_do_notifications", false)
+                		.commit();
+                }
+				break;
+			case NOTIFICATION_LISTENER_OFF:
+				Log.d("F-oAR", "return from unchecking the box");
+				if (Functions.Is.service_running(ctx, NotificationService.class)) {
+                	Toast.makeText(ctx, ctx.getString(R.string.notif_left_checked), Toast.LENGTH_SHORT).show();
+                	PreferenceManager.getDefaultSharedPreferences(ctx)
+                		.edit()
+                		.putBoolean("pref_do_notifications", true)
+                		.commit();
+                }
+				break;
 			}
 		}
-		
 		
 		/**
 		 * Invoked via the AdminReceiver when the admin status changes.
@@ -639,6 +683,23 @@ public class Functions {
 			//Log_d(ctx.getString(R.string.app_name), String.format("cover_closed = %b", cover_closed));
 		}
 
+		public static void headset(final Context ctx, int state) {
+			if (state != 0) {
+				// headset was just inserted
+				if (Is.cover_closed(ctx)) {
+					new Handler().postDelayed(new Runnable() {
+						@Override
+						public void run() {
+							ctx.getApplicationContext().startActivity(new Intent(ctx.getApplicationContext(), DefaultActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+						}
+					}, 500); // FIXME this is by far the biggest hack yet
+				}
+			}
+			
+			if (defaultActivity.on_screen) {
+				defaultActivity.refreshDisplay();
+			}
+		}
 
 		public static void incoming_call(final Context ctx, final String number) {
 			Log_d("phone", "call from " + number);
@@ -724,20 +785,20 @@ public class Functions {
 		 * @param ctx Application context.
 		 * @return Is the cover closed.
 		 */
-		public static boolean service_running(Context ctx) {
+		public static boolean service_running(Context ctx, Class svc) {
 			
 			Log_d(LOG_TAG + ".service_running", "Is service running called.");
 			
 			ActivityManager manager = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
 			for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-				if (ViewCoverService.class.getName().equals(service.service.getClassName())) {
+				if (svc.getName().equals(service.service.getClassName())) {
 					// the service is running
-					Log_d(LOG_TAG + ".service_running", "The service is running.");
+					Log_d("F.Is.service_running", "The " + svc.getName() + " is running.");
 					return true;
 				}
 			}
 			// the service must not be running
-			Log_d(LOG_TAG + ".service_running", "The service is NOT running.");
+			Log_d("F.Is.service_running", "The " + svc.getName() + " service is NOT running.");
 			return false;
 		}
 		

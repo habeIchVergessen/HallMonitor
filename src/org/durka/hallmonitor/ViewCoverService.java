@@ -39,7 +39,8 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     private final static String LOG_TAG = "VCS";
 
 	private SensorManager       mSensorManager;
-
+    private HeadsetReceiver		mHeadset;
+    
     /**
      *  Text-To-Speech
      */
@@ -68,7 +69,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 
     @Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.d(LOG_TAG + ".onStartCommand", "View cover service started");
+		Log.d("VCS.onStartCommand", "View cover service started");
 
         //We don't want to do this - almost by defninition the cover can't be closed, and we don't actually want to do any open cover functionality
 		//until the cover is closed and then opened again
@@ -82,12 +83,17 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 		
 		mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_NORMAL);
 		
-//		Log.d(LOG_TAG + "-oSC", "scanning keyboards...");
+//		Log.d("VCS-oSC", "scanning keyboards...");
 //		InputManager im = (InputManager) getSystemService(INPUT_SERVICE);
 //		for (int id : im.getInputDeviceIds()) {
 //			InputDevice dev = im.getInputDevice(id);
-//			Log.d(LOG_TAG + "-oSC", "\t" + dev.toString());
+//			Log.d("VCS-oSC", "\t" + dev.toString());
 //		}
+		
+		mHeadset = new HeadsetReceiver();
+		IntentFilter intfil = new IntentFilter();
+		intfil.addAction("android.intent.action.HEADSET_PLUG");
+		registerReceiver(mHeadset, intfil);
 
         // Text-To-Speech
         initTextToSpeech();
@@ -109,9 +115,12 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 	
 	@Override
 	public void onDestroy() {
-		Log.d(LOG_TAG + ".onStartCommand", "View cover service stopped");
+		Log.d("VCS.onStartCommand", "View cover service stopped");
 		
+		//unregisterReceiver(receiver);
 		mSensorManager.unregisterListener(this);
+		
+		unregisterReceiver(mHeadset);
 
         // Text-To-Speech
         unregisterReceiver(receiver);

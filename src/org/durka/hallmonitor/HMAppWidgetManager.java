@@ -47,6 +47,7 @@ public class HMAppWidgetManager {
 	public void register_widget(Activity act, String widgetType) {
 	
 		Log_d("HMAWM.register_widget","Register widget called with type: " + widgetType);
+		new Exception().printStackTrace();
 		
 		//if we haven't yet created an app widget manager and app widget host instance then do so
 		if (mAppWidgetManager == null) mAppWidgetManager = AppWidgetManager.getInstance(act);
