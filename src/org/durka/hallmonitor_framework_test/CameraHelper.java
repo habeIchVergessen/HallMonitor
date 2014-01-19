@@ -37,7 +37,6 @@ public class CameraHelper {
         String[] pictureSizes = pictureSizes = context.getResources().getStringArray(R.array.pref_camera_picturesize_entryvalues);
 
 		if (supported == null || pictureSizes == null) {
-            Log.d("CameraHelper.initialCameraPictureSize", "stop here: " + supported + ", " + pictureSizes);
             return;
         }
 
@@ -95,7 +94,6 @@ public class CameraHelper {
 		List<String> flashModes = params.getSupportedFlashModes();
 
         if (flashModes == null) {
-            Log.d("CameraHelper.updateCameraParametersPreference", "getSupportedFlashModes returns null");
             return;
         }
 

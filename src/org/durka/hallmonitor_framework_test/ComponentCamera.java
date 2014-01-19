@@ -33,7 +33,7 @@ public class ComponentCamera extends ComponentFramework.Layout {
         mCaptureButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.d(LOG_TAG, "onClick: R.id.default_camera visible doesn't work properly");
+                Log_d(LOG_TAG, "onClick: R.id.default_camera visible doesn't work properly");
                 ((CameraPreview)findViewById(R.id.default_camera)).capture();
             }
         });
@@ -53,7 +53,7 @@ public class ComponentCamera extends ComponentFramework.Layout {
         try {
             getChildAt(0).setVisibility(VISIBLE);
             if (cameraLayout != null) {
-                Log.d(LOG_TAG, "onOpenComponent: R.id.default_camera visible doesn't work properly");
+                Log_d(LOG_TAG, "onOpenComponent: R.id.default_camera visible doesn't work properly");
                 cameraLayout.findViewById(R.id.default_camera).setVisibility(VISIBLE);
             }
         } catch (Exception e) {

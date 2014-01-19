@@ -5,16 +5,26 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
+import android.os.Bundle;
+import android.preference.Preference;
 import android.preference.PreferenceManager;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 
 public class ComponentFramework {
 
@@ -26,6 +36,10 @@ public class ComponentFramework {
     public interface OnScreenOffTimerListener {
         public boolean onStartScreenOffTimer();
         public boolean onStopScreenOffTimer();
+    }
+
+    public interface OnPreviewComponentListener {
+        public boolean onPreviewComponent();
     }
 
     public static class Child extends RelativeLayout {
@@ -134,11 +148,17 @@ public class ComponentFramework {
 
             return getPrefInt("pref_default_bgcolor", defaultBg);
         }
+
     }
 
     public static class Container extends Child implements OnPauseResumeListener {
 
         private final String LOG_TAG = "ComponentFramework.Container";
+
+        private boolean mLayoutInflated = false;
+        private HashMap<Integer, Layout> mBackStack = new HashMap<Integer, Layout>();
+        private String mPreviewMode = null;
+        private Bundle mApplicationState = new Bundle();
 
         public Container(Context context) {
             super(context);
@@ -172,9 +192,9 @@ public class ComponentFramework {
             Layout loading = null;
             if ((loading = initLayout(getPrefString("prefDefaultLayoutClassName"))) != null ||  // class name from preference
                 (loading = initLayout(mLayoutClassName)) != null ||                             // class name from styled attr
-                (loading = new DefaultLayout(mContext, mAttributeSet)) != null                  // resource id from styled attr
-               ) {
-                    mLayoutView = loading;
+                (loading = new DefaultLayout(mContext, mAttributeSet)) != null) {               // resource id from styled attr
+                mLayoutView = loading;
+                mBackStack.put(mBackStack.size(), loading);
             }
 
             addView(mLayoutView);
@@ -217,25 +237,21 @@ public class ComponentFramework {
 
         @Override
         public void addView(View view, int index) {
-            Log_d(LOG_TAG, "addView: view, index");
             addView(view, index, null);
         }
 
         @Override
         public void addView(View view, ViewGroup.LayoutParams layoutParams) {
-            Log_d(LOG_TAG, "addView: view, layoutParams");
             addView(view, super.getChildCount(), layoutParams);
         }
 
         @Override
         public void addView(View view, int width, int height) {
-            Log_d(LOG_TAG, "addView: view, width, height");
             addView(view, super.getChildCount(), new ViewGroup.LayoutParams(width, height));
         }
 
         @Override
         public void addView(View view, int index, ViewGroup.LayoutParams layoutParams) {
-            Log_d(LOG_TAG, "addView: view, index, layoutParams");
             if (!(view instanceof Layout) && !(view instanceof MenuLayout) && !(view instanceof WarningLayout)) {
                 super.addView(new WarningLayout(this.getContext(), mAttributeSet, view.getLayoutParams(), view.getClass()));
                 return;
@@ -248,9 +264,60 @@ public class ComponentFramework {
         final protected void onFinishInflate() {
             super.onFinishInflate();
 
-            Log.d(LOG_TAG, "onFinishInflate: ");
+            mLayoutInflated = true;
+
+            Log_d(LOG_TAG, "onFinishInflate: ");
             if (mLayoutView != null)
                 mLayoutView.setVisibility(VISIBLE);
+        }
+
+        @Override
+        public void bringChildToFront(View child) {
+            if (mLayoutInflated) {
+                try {
+                    final Layout backStack = mBackStack.get(mBackStack.size() - 1);
+                    final Layout lastBackStack = mBackStack.get(mBackStack.size() - 2);
+                    final Layout layout = (Layout)child;
+                    Layout bringToFrontLayout = null;
+
+                    // layout should be shown (push)
+                    if (layout != backStack && layout.isShown() && backStack.isShown()) {
+                        mBackStack.put(mBackStack.size(), layout);
+                        bringToFrontLayout = layout;
+                    }
+                    // layout should be invisible (pop)
+                    if (layout == backStack && !layout.isShown() && lastBackStack != null) {
+                        mBackStack.remove(mBackStack.size() - 1);
+                        bringToFrontLayout = lastBackStack;
+                    }
+
+                    // real bringToFront
+                    if (bringToFrontLayout != null) {
+                        bringToFrontLayout.bringToFront();
+                        bringToFrontLayout.requestLayout();
+                        bringToFrontLayout.invalidate();
+                    }
+                } catch (Exception e) {
+                    Log_d(LOG_TAG, "bringChildToFront: exception occurred! " + e.getMessage());
+                }
+            }
+        }
+
+        @Override
+        public boolean dispatchTouchEvent(MotionEvent motionEvent) {
+            boolean result = false;
+            Layout dispatchLayout = mBackStack.get(mBackStack.size() - 1);
+
+            MotionEvent.PointerCoords pointerCoords = new MotionEvent.PointerCoords();
+            motionEvent.getPointerCoords(motionEvent.getActionIndex(), pointerCoords);
+
+            // calc relative coordinates
+            MotionEvent dispatch = MotionEvent.obtain(motionEvent);
+            dispatch.setLocation(pointerCoords.x - getLeft(), pointerCoords.y - getTop());
+            result = dispatchLayout.dispatchTouchEvent(dispatch);
+            dispatch.recycle();
+
+            return result;
         }
 
         @Override
@@ -297,15 +364,33 @@ public class ComponentFramework {
         public void onResume() {
             setDebugMode(getPrefBoolean("pref_dev_opts_debug", false));
 
-            // propagate to child views
+            // propagate resume to child views
             for (int idx=0; idx<getChildCount(); idx++) {
-                if (getChildAt(idx) instanceof Layout) {
-                    Layout layout = (Layout)getChildAt(idx);
+                if ((getChildAt(idx) instanceof Layout)  && OnPauseResumeListener.class.isAssignableFrom(getChildAt(idx).getClass()) && getChildAt(idx).isShown())
+                    ((OnPauseResumeListener)getChildAt(idx)).onResume();
+            }
 
-                    if (OnPauseResumeListener.class.isAssignableFrom(layout.getClass()) && layout.isShown())
-                        ((OnPauseResumeListener)layout).onResume();
+            // propagate preview to child views
+            if (mPreviewMode == null && getActivity().getIntent().getExtras() != null && !getActivity().getIntent().getExtras().getString("preview", "").equals("")) {
+                mPreviewMode = getActivity().getIntent().getExtras().getString("preview");
+
+                for (int idx=0; idx<getChildCount(); idx++) {
+                    if ((getChildAt(idx) instanceof Layout) && OnPreviewComponentListener.class.isAssignableFrom(getChildAt(idx).getClass()) &&
+                       ((OnPreviewComponentListener)getChildAt(idx)).onPreviewComponent()) {
+                        Log_d(LOG_TAG, "onResume: preview -> " + getChildAt(idx).getClass().getName());
+                        getChildAt(idx).setVisibility(VISIBLE);
+                        break;
+                    }
                 }
             }
+        }
+
+        public String getPreviewMode() {
+            return mPreviewMode;
+        }
+
+        public Bundle getApplicationState() {
+            return mApplicationState;
         }
     }
 
@@ -397,6 +482,9 @@ public class ComponentFramework {
                         if (OnPauseResumeListener.class.isAssignableFrom(mLayoutView.getClass()))
                             ((OnPauseResumeListener)mLayoutView).onResume();
                         super.setVisibility(VISIBLE);
+                        // handle default layout visibility
+                        if (getContainer() != null)
+                            getContainer().bringChildToFront(this);
                     } else
                         clearChildViews();
                     break;
@@ -408,6 +496,9 @@ public class ComponentFramework {
                         onCloseComponent();
                     }
                     super.setVisibility(INVISIBLE);
+                    // handle default layout visibility
+                    if (getContainer() != null)
+                        getContainer().bringChildToFront(this);
                     clearChildViews();
                     break;
             }

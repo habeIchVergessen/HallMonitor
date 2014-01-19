@@ -14,15 +14,13 @@
         class="org.durka.hallmonitor_framework_test.ComponentFramework$Container"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
-        app:defaultLayoutClassName="ComponentDefaultDurka"
-        app:debugMode="true">
+        app:defaultLayoutClassName="ComponentDefaultDurka">
 
         <view
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:id="@+id/componentPhone"
             class="org.durka.hallmonitor_framework_test.ComponentPhone"
-            app:debugMode="true"
         />
 
         <view
@@ -30,8 +28,7 @@
             android:layout_height="match_parent"
             android:id="@+id/componentCamera"
             class="org.durka.hallmonitor_framework_test.ComponentCamera"
-            app:debugMode="true"
-            />
+        />
 
     </view>
 

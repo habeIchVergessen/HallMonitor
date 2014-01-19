@@ -33,13 +33,15 @@ import android.widget.Toast;
 public class PreferenceFragmentLoader extends PreferenceFragment  implements SharedPreferences.OnSharedPreferenceChangeListener {
     private final String LOG_TAG = "PreferenceFragmentLoader";
 
-    private boolean mDebug = DefaultActivity.isDebug();
+    private boolean mDebug = false;
     private int mAboutClicked = 0;
     private int mAboutClickCount = 7;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        mDebug = getPreferenceManager().getSharedPreferences().getBoolean("pref_dev_opts_debug", mDebug);
 
         try {
             final String resourceName = getArguments().getString("resource", "");
@@ -71,7 +73,8 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
                     if (mAboutClicked == mAboutClickCount) {
                         mAboutClicked = 0;
                         SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
-                        prefs.edit().putBoolean("pref_dev_opts_debug", !mDebug).commit();
+                        boolean debug = !prefs.getBoolean("pref_dev_opts_debug", false);
+                        prefs.edit().putBoolean("pref_dev_opts_debug", debug).commit();
                         Toast.makeText(getActivity(), "debug is " + (prefs.getBoolean("pref_dev_opts_debug", false) ? "enabled" : "disabled") + " now!", Toast.LENGTH_LONG).show();
                     }
 
