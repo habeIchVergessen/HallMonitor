@@ -42,6 +42,7 @@ import android.os.Build;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
@@ -176,16 +177,16 @@ public class Functions {
 
             //using the handler is causing a problem, seems to lock up the app, hence replaced with a Timer
             timer.schedule(timerTaskScreenOff = new TimerTask() {
-			//handler.postDelayed(new Runnable() {
-				@Override
-				public void run() {	
-					Log_d(LOG_TAG + ".rearmScreenOffTimer", "Locking screen now.");
-					dpm.lockNow();
-					//FIXME Would it be better to turn the screen off rather than actually locking
-					//presumably then it will auto lock as per phone configuration
-					//I can't work out how to do it though!
-				}
-			}, delay);
+                //handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    Log_d(LOG_TAG + ".rearmScreenOffTimer", "Locking screen now.");
+                    dpm.lockNow();
+                    //FIXME Would it be better to turn the screen off rather than actually locking
+                    //presumably then it will auto lock as per phone configuration
+                    //I can't work out how to do it though!
+                }
+            }, delay);
 		}
 		
 		public static void stopScreenOffTimer() {
