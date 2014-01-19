@@ -283,7 +283,7 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
 
         refreshDisplay();
 
-        // check preview
+        // check preview (extras are configured in xml)
         if (getIntent().getExtras() != null && !getIntent().getExtras().getString("preview", "").equals("")) {
             String preview = getIntent().getExtras().getString("preview");
 
@@ -502,4 +502,3 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
             Log.d(tag, message);
     }
 }
-
