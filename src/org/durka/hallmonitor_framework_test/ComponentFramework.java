@@ -308,12 +308,9 @@ public class ComponentFramework {
             boolean result = false;
             Layout dispatchLayout = mBackStack.get(mBackStack.size() - 1);
 
-            MotionEvent.PointerCoords pointerCoords = new MotionEvent.PointerCoords();
-            motionEvent.getPointerCoords(motionEvent.getActionIndex(), pointerCoords);
-
             // calc relative coordinates
             MotionEvent dispatch = MotionEvent.obtain(motionEvent);
-            dispatch.setLocation(pointerCoords.x - getLeft(), pointerCoords.y - getTop());
+            dispatch.offsetLocation(-dispatchLayout.getLeft(), -dispatchLayout.getTop());
             result = dispatchLayout.dispatchTouchEvent(dispatch);
             dispatch.recycle();
 
