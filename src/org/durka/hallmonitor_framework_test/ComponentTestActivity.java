@@ -118,9 +118,8 @@ public class ComponentTestActivity extends Activity implements ComponentFramewor
            ) {
             // calc relative coordinates (action bar & notification bar!!!) and dispatch
             MotionEvent dispatch = MotionEvent.obtain(motionEvent);
-            dispatch.setLocation(pointerCoords.x - visibleRect.left + mComponentContainer.getLeft(), pointerCoords.y - visibleRect.top + mComponentContainer.getTop());
-            boolean result = false;
-            result = mComponentContainer.dispatchTouchEvent(dispatch);
+            dispatch.offsetLocation(-visibleRect.left, -visibleRect.top);
+            boolean result = mComponentContainer.dispatchTouchEvent(dispatch);
             dispatch.recycle();
 
             // start tracking
