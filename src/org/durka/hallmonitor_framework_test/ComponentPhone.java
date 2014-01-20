@@ -437,14 +437,12 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
         switch (actionMasked) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                Log_d(LOG_TAG, "onTouchEvent: DOWN|POINTER_DOWN " + actionMasked + ", " + pointerCoords.x + ":" + pointerCoords.y + ", " + TouchEventProcessor.isTracking() + ", " + TouchEventProcessor.pointerInRect(pointerCoords, mAcceptButton) + ", " + TouchEventProcessor.pointerInRect(pointerCoords, mRejectButton));
                 if (!TouchEventProcessor.isTracking()) {
                     // check accept button
-                    if (mAcceptButton.isShown() && TouchEventProcessor.pointerInRect(pointerCoords, mAcceptButton) && !TouchEventProcessor.isTracking())
+                    if (mAcceptButton.isShown() && TouchEventProcessor.pointerInRect(pointerCoords, mAcceptButton))
                         TouchEventProcessor.startTracking(mAcceptButton);
-
                     // check reject button
-                    if (mRejectButton.isShown() && TouchEventProcessor.pointerInRect(pointerCoords, mRejectButton) && !TouchEventProcessor.isTracking())
+                    else if (mRejectButton.isShown() && TouchEventProcessor.pointerInRect(pointerCoords, mRejectButton))
                         TouchEventProcessor.startTracking(mRejectButton);
 
                     if ((result = TouchEventProcessor.isTracking())) {
@@ -502,7 +500,7 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
                 break;
         }
 
-        return true; //result;
+        return result;
     }
 
     private static class TouchEventProcessor {

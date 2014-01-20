@@ -24,7 +24,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class ComponentFramework {
 
@@ -40,6 +43,110 @@ public class ComponentFramework {
 
     public interface OnPreviewComponentListener {
         public boolean onPreviewComponent();
+    }
+
+    public static abstract class Activity extends android.app.Activity {
+
+        private final String LOG_TAG = "ComponentFramework.Activity";
+
+        private HashSet<Integer> mTrackedTouchEvent = new HashSet<Integer>();
+        private boolean mDebug = false;
+
+        public abstract Container getContainer();
+
+        @Override
+        protected void onPause() {
+            super.onPause();
+
+            // propagate to layout's
+            if (getContainer() != null)
+                getContainer().onPause();
+        }
+
+        @Override
+        protected void onResume() {
+            super.onResume();
+
+            // propagate to layout's
+            if (getContainer() != null) {
+                getContainer().setDebugMode((mDebug = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_dev_opts_debug", false)));
+                getContainer().onResume();
+            }
+        }
+
+        @Override
+        final public boolean dispatchTouchEvent(MotionEvent motionEvent) {
+            final int UNDEFINED_POINTER = -1;
+            if (getContainer() == null)
+                return super.dispatchTouchEvent(motionEvent);
+
+            final int actionIndex = motionEvent.getActionIndex(), actionMasked = motionEvent.getActionMasked();
+            MotionEvent.PointerCoords pointerCoords = new MotionEvent.PointerCoords();
+            motionEvent.getPointerCoords(actionIndex, pointerCoords);
+
+            Rect visibleRect = new Rect();
+            getContainer().getGlobalVisibleRect(visibleRect);
+
+            int pointerId = UNDEFINED_POINTER;
+            switch (actionMasked) {
+                case  MotionEvent.ACTION_DOWN:
+                case  MotionEvent.ACTION_POINTER_DOWN:
+                case  MotionEvent.ACTION_UP:
+                case  MotionEvent.ACTION_POINTER_UP:
+                    pointerId = motionEvent.getPointerId(actionIndex);
+                    break;
+                case  MotionEvent.ACTION_MOVE:
+                    // search tracked pointers
+                    for (Iterator<Integer> trackedIds = mTrackedTouchEvent.iterator(); trackedIds.hasNext(); ) {
+                        int next = trackedIds.next();
+
+                        if (motionEvent.findPointerIndex(next) != UNDEFINED_POINTER) {
+                            pointerId = next;
+                            break;
+                        }
+                    }
+                    break;
+            }
+
+            // container
+            if (pointerId != UNDEFINED_POINTER &&
+                (   // start new tracking when down and matches container
+                    (visibleRect.contains((int)pointerCoords.x, (int)pointerCoords.y) && (actionMasked == MotionEvent.ACTION_DOWN || actionMasked == MotionEvent.ACTION_POINTER_DOWN)) ||
+                    // or already tracked and not down
+                    (mTrackedTouchEvent.contains(pointerId) && actionMasked != MotionEvent.ACTION_DOWN && actionMasked != MotionEvent.ACTION_POINTER_DOWN)
+                )) {
+                // calc relative coordinates (action bar & notification bar!!!) and dispatch
+                MotionEvent dispatch = MotionEvent.obtain(motionEvent);
+                dispatch.offsetLocation(-visibleRect.left, -visibleRect.top);
+                boolean result = getContainer().dispatchTouchEvent(dispatch);
+                dispatch.recycle();
+
+                // start tracking
+                if (result && (actionMasked == MotionEvent.ACTION_DOWN || actionMasked == MotionEvent.ACTION_POINTER_DOWN)) {
+                    Log_d(LOG_TAG, "dispatchTouchEvent: start tracking #" + pointerId);
+                    mTrackedTouchEvent.add(pointerId);
+                }
+            }
+
+            // enable touch events outside container
+            if (!mTrackedTouchEvent.contains(pointerId))
+                super.dispatchTouchEvent(motionEvent);
+
+            // stop tracking
+            if (mTrackedTouchEvent.contains(pointerId) && (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_POINTER_UP || actionMasked == MotionEvent.ACTION_CANCEL)) {
+                Log_d(LOG_TAG, "dispatchTouchEvent: stop tracking #" + pointerId);
+                mTrackedTouchEvent.remove(pointerId);
+            }
+
+            // enable processing of all touch events
+            return true;
+        }
+
+        // helper
+        protected void Log_d(String tag, String message) {
+            if (mDebug)
+                Log.d(tag, message);
+        }
     }
 
     public static class Child extends RelativeLayout {
@@ -273,32 +380,49 @@ public class ComponentFramework {
 
         @Override
         public void bringChildToFront(View child) {
-            if (mLayoutInflated) {
+            if (mLayoutInflated && (child instanceof Layout)) {
                 try {
                     final Layout backStack = mBackStack.get(mBackStack.size() - 1);
                     final Layout lastBackStack = mBackStack.get(mBackStack.size() - 2);
                     final Layout layout = (Layout)child;
-                    Layout bringToFrontLayout = null;
 
-                    // layout should be shown (push)
-                    if (layout != backStack && layout.isShown() && backStack.isShown()) {
+                    // layout invisible
+                    if (!child.isShown())
+                        return;
+
+                    // add to list
+                    if (!mBackStack.containsValue(layout)) {
                         mBackStack.put(mBackStack.size(), layout);
-                        bringToFrontLayout = layout;
-                    }
-                    // layout should be invisible (pop)
-                    if (layout == backStack && !layout.isShown() && lastBackStack != null) {
-                        mBackStack.remove(mBackStack.size() - 1);
-                        bringToFrontLayout = lastBackStack;
+                    // resort list
+                    } else {
+                        int idx = 0;
+                        for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
+                            if (entry.getValue() != layout) {
+                                mBackStack.put(idx, entry.getValue());
+                                idx++;
+                            } else
+                                mBackStack.remove(entry.getKey());
+                        }
+                        mBackStack.put(idx, layout);
                     }
 
-                    // real bringToFront
-                    if (bringToFrontLayout != null) {
-                        bringToFrontLayout.bringToFront();
-                        bringToFrontLayout.requestLayout();
-                        bringToFrontLayout.invalidate();
-                    }
                 } catch (Exception e) {
                     Log_d(LOG_TAG, "bringChildToFront: exception occurred! " + e.getMessage());
+                }
+            }
+
+            super.bringChildToFront(child);
+        }
+
+        public void sendChildToBack(View child) {
+            if (!mBackStack.containsValue(child) || !(child instanceof Layout))
+                return;
+
+            Layout layout = (Layout)child;
+
+            for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
+                if (entry.getValue() == layout) {
+                    mBackStack.remove(entry.getKey());
                 }
             }
         }
@@ -495,7 +619,7 @@ public class ComponentFramework {
                     super.setVisibility(INVISIBLE);
                     // handle default layout visibility
                     if (getContainer() != null)
-                        getContainer().bringChildToFront(this);
+                        getContainer().sendChildToBack(this);
                     clearChildViews();
                     break;
             }
@@ -609,7 +733,7 @@ public class ComponentFramework {
 
     public static class DefaultLayout extends Layout {
 
-        private final String LOG_TAG = "ComponentFramework.Default";
+        private final String LOG_TAG = "ComponentFramework.DefaultLayout";
 
         public DefaultLayout(Context context) {
             super(context);
@@ -632,7 +756,7 @@ public class ComponentFramework {
 
     public static abstract class MenuLayout extends Child {
 
-        private final String LOG_TAG = "ComponentFramework.Menu";
+        private final String LOG_TAG = "ComponentFramework.MenuLayout";
 
         protected boolean mDebug = false;
 
