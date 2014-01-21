@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- container -->
     <view
         android:layout_width="315dp"
         android:layout_height="125dp"
@@ -16,6 +17,7 @@
         android:layout_centerHorizontal="true"
         app:defaultLayoutClassName="ComponentDefaultDurka">
 
+        <!-- phone -->
         <view
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -23,6 +25,7 @@
             class="org.durka.hallmonitor_framework_test.ComponentPhone"
         />
 
+        <!-- camera -->
         <view
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -31,6 +34,19 @@
         />
 
     </view>
+
+    <!-- menu -->
+    <view
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/option_overlay_menu"
+        android:layout_below="@+id/componentContainer"
+        android:layout_centerHorizontal="true"
+        android:background="#ff000000"
+        class="org.durka.hallmonitor_framework_test.ComponentMenu"
+        app:overlayLayout="@+id/componentContainer"
+    />
+
 
     <Button
         android:layout_width="wrap_content"

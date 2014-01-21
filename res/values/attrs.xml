@@ -29,4 +29,10 @@
         <attr name="debugMode" format="boolean"/>
     </declare-styleable>
 
+    <declare-styleable name="ComponentMenu">
+        <attr name="overlayLayout" format="reference"/>
+        <attr name="overlayBackgroundColor" format="color"/>
+        <attr name="buttonSize" format="integer"/>
+        <attr name="enableOptionSnap" format="boolean"/>
+    </declare-styleable>
 </resources>

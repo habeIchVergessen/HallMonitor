@@ -12,4 +12,11 @@
 
     <!-- phone widget -->
     <item type="id" name="phone_widget" />
+
+    <!-- menu -->
+    <item type="id" name="componentMenu" />
+    <!-- id's used by dynamically generated view inside ComponentMenu -->
+    <item type="id" name="option_overlay_menu"/>
+    <item type="id" name="option_overlay_menu_button"/>
+    <item type="id" name="option_overlay"/>
 </resources>

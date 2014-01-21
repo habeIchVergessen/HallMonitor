@@ -16,13 +16,14 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
 
     private final String LOG_TAG = "ComponentTestActivity";
 
-    private ComponentFramework.Container mComponentContainer = null;
-
     @Override
     protected void onCreate(Bundle saveInstanceState) {
         super.onCreate(saveInstanceState);
 
         setContentView(R.layout.component_container_test);
+
+        if (getContainer() != null && getMenu() != null)
+            getMenu().registerOnMenuOpenListener(getContainer());
     }
 
     @Override
@@ -64,8 +65,12 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
         return (ComponentFramework.Container)findViewById(R.id.componentContainer);
     }
 
+    public ComponentFramework.Menu getMenu() {
+        return (ComponentFramework.Menu)findViewById(R.id.componentMenu);
+    }
+
     public void onShowComponentPhone(View view) {
-        ComponentFramework.Layout componentPhone = mComponentContainer.getLayoutByResId(R.id.componentPhone);
+        ComponentFramework.Layout componentPhone = getContainer().getLayoutByResId(R.id.componentPhone);
 
         if (componentPhone != null) {
             if (!componentPhone.isShown())
@@ -76,7 +81,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
     }
 
     public void onShowComponentCamera(View view) {
-        ComponentFramework.Layout componentCamera = mComponentContainer.getLayoutByResId(R.id.componentCamera);
+        ComponentFramework.Layout componentCamera = getContainer().getLayoutByResId(R.id.componentCamera);
 
         if (componentCamera != null) {
             if (!componentCamera.isShown())
@@ -97,4 +102,5 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
 
         return true;
     }
+
 }

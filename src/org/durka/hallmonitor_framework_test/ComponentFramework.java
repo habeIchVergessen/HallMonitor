@@ -49,10 +49,11 @@ public class ComponentFramework {
 
         private final String LOG_TAG = "ComponentFramework.Activity";
 
-        private HashSet<Integer> mTrackedTouchEvent = new HashSet<Integer>();
+        private HashMap<Integer,Child> mTrackedTouchEvent = new HashMap<Integer,Child>();
         private boolean mDebug = false;
 
         public abstract Container getContainer();
+        public abstract Menu getMenu();
 
         @Override
         protected void onPause() {
@@ -81,61 +82,68 @@ public class ComponentFramework {
                 return super.dispatchTouchEvent(motionEvent);
 
             final int actionIndex = motionEvent.getActionIndex(), actionMasked = motionEvent.getActionMasked();
+            int pointerId = (actionMasked != MotionEvent.ACTION_MOVE ? motionEvent.getPointerId(actionIndex) : motionEvent.getPointerId(actionIndex));
+
             MotionEvent.PointerCoords pointerCoords = new MotionEvent.PointerCoords();
             motionEvent.getPointerCoords(actionIndex, pointerCoords);
 
-            Rect visibleRect = new Rect();
-            getContainer().getGlobalVisibleRect(visibleRect);
-
-            int pointerId = UNDEFINED_POINTER;
-            switch (actionMasked) {
-                case  MotionEvent.ACTION_DOWN:
-                case  MotionEvent.ACTION_POINTER_DOWN:
-                case  MotionEvent.ACTION_UP:
-                case  MotionEvent.ACTION_POINTER_UP:
-                    pointerId = motionEvent.getPointerId(actionIndex);
-                    break;
-                case  MotionEvent.ACTION_MOVE:
-                    // search tracked pointers
-                    for (Iterator<Integer> trackedIds = mTrackedTouchEvent.iterator(); trackedIds.hasNext(); ) {
-                        int next = trackedIds.next();
-
-                        if (motionEvent.findPointerIndex(next) != UNDEFINED_POINTER) {
-                            pointerId = next;
-                            break;
-                        }
-                    }
-                    break;
-            }
-
-            // container
-            if (pointerId != UNDEFINED_POINTER &&
-                (   // start new tracking when down and matches container
-                    (visibleRect.contains((int)pointerCoords.x, (int)pointerCoords.y) && (actionMasked == MotionEvent.ACTION_DOWN || actionMasked == MotionEvent.ACTION_POINTER_DOWN)) ||
-                    // or already tracked and not down
-                    (mTrackedTouchEvent.contains(pointerId) && actionMasked != MotionEvent.ACTION_DOWN && actionMasked != MotionEvent.ACTION_POINTER_DOWN)
-                )) {
-                // calc relative coordinates (action bar & notification bar!!!) and dispatch
-                MotionEvent dispatch = MotionEvent.obtain(motionEvent);
-                dispatch.offsetLocation(-visibleRect.left, -visibleRect.top);
-                boolean result = getContainer().dispatchTouchEvent(dispatch);
-                dispatch.recycle();
-
-                // start tracking
-                if (result && (actionMasked == MotionEvent.ACTION_DOWN || actionMasked == MotionEvent.ACTION_POINTER_DOWN)) {
-                    Log_d(LOG_TAG, "dispatchTouchEvent: start tracking #" + pointerId);
-                    mTrackedTouchEvent.add(pointerId);
+            // DOWN or ACTION_POINTER_DOWN
+            if ((actionMasked == MotionEvent.ACTION_DOWN || actionMasked == MotionEvent.ACTION_POINTER_DOWN)) {
+                // menu
+                if (getMenu() != null && getMenu().isAbsCoordsMatchingMenuHitBox(motionEvent) && dispatchTouchEventToView(motionEvent, getMenu())) {
+                    Log_d(LOG_TAG, "dispatchTouchEvent: start tracking menu #" + pointerId);
+                    mTrackedTouchEvent.put(pointerId, getMenu());
                 }
+
+                // container
+                if (!mTrackedTouchEvent.containsKey(pointerId) && getContainer() != null) {
+                    Rect visibleRect = new Rect();
+                    getContainer().getGlobalVisibleRect(visibleRect);
+
+                    if (visibleRect.contains((int)pointerCoords.x, (int)pointerCoords.y) && dispatchTouchEventToView(motionEvent, getContainer())) {
+                        Log_d(LOG_TAG, "dispatchTouchEvent: start tracking container #" + pointerId);
+                        mTrackedTouchEvent.put(pointerId, getContainer());
+                    }
+                }
+
+                // others
+                if (!mTrackedTouchEvent.containsKey(pointerId))
+                    super.dispatchTouchEvent(motionEvent);
             }
 
-            // enable touch events outside container
-            if (!mTrackedTouchEvent.contains(pointerId))
-                super.dispatchTouchEvent(motionEvent);
+            // MOVE
+            if ((actionMasked == MotionEvent.ACTION_MOVE)) {
+                Child child = null;
 
-            // stop tracking
-            if (mTrackedTouchEvent.contains(pointerId) && (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_POINTER_UP || actionMasked == MotionEvent.ACTION_CANCEL)) {
-                Log_d(LOG_TAG, "dispatchTouchEvent: stop tracking #" + pointerId);
-                mTrackedTouchEvent.remove(pointerId);
+                // search tracked pointers
+                for (Iterator<Integer> trackedIds = mTrackedTouchEvent.keySet().iterator(); trackedIds.hasNext(); ) {
+                    pointerId = trackedIds.next();
+
+                    if (motionEvent.findPointerIndex(pointerId) != UNDEFINED_POINTER && dispatchTouchEventToView(motionEvent, (child = mTrackedTouchEvent.get(pointerId)))) {
+                        //Log_d(LOG_TAG, "dispatchTouchEvent: tracked pointer " + child.getClass().getName());
+                    }
+                }
+
+                // not in the tracked list (others)
+                if (child == null)
+                    super.dispatchTouchEvent(motionEvent);
+            }
+
+            // UP, POINTER_UP or CANCEL
+            if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_POINTER_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
+                Child child = null;
+
+                // clean up tracking list
+                if (mTrackedTouchEvent.containsKey(pointerId)) {
+                    dispatchTouchEventToView(motionEvent, (child = mTrackedTouchEvent.get(pointerId)));
+
+                    Log_d(LOG_TAG, "dispatchTouchEvent: stop tracking #" + pointerId + ", " + child.getClass().getName());
+                    mTrackedTouchEvent.remove(pointerId);
+                // send to others
+                } else {
+                    Log_d(LOG_TAG, "dispatchTouchEvent: send to super");
+                    super.dispatchTouchEvent(motionEvent);
+                }
             }
 
             // enable processing of all touch events
@@ -147,6 +155,26 @@ public class ComponentFramework {
             if (mDebug)
                 Log.d(tag, message);
         }
+    }
+
+    private static boolean dispatchTouchEventToView(MotionEvent motionEvent, View view) {
+        boolean result = false;
+
+        Rect visibleRect = new Rect();
+        view.getGlobalVisibleRect(visibleRect);
+
+        // send absolute coordinates to menu
+        if (view instanceof Menu) {
+            result = view.dispatchTouchEvent(motionEvent);
+        // calc relative coordinates (action bar & notification bar!!!) and dispatch
+        } else {
+            MotionEvent dispatch = MotionEvent.obtain(motionEvent);
+            dispatch.offsetLocation(-visibleRect.left, -visibleRect.top);
+            result = view.dispatchTouchEvent(dispatch);
+            dispatch.recycle();
+        }
+
+        return result;
     }
 
     public static class Child extends RelativeLayout {
@@ -258,7 +286,7 @@ public class ComponentFramework {
 
     }
 
-    public static class Container extends Child implements OnPauseResumeListener {
+    public static class Container extends Child implements OnPauseResumeListener, ComponentMenu.OnMenuOpenListener {
 
         private final String LOG_TAG = "ComponentFramework.Container";
 
@@ -360,11 +388,17 @@ public class ComponentFramework {
         @Override
         public void addView(View view, int index, ViewGroup.LayoutParams layoutParams) {
             if (!(view instanceof Layout) && !(view instanceof MenuLayout) && !(view instanceof WarningLayout)) {
+                Log_d(LOG_TAG, "addView: WarningLayout -> '" + view.getClass().getName() + "'");
                 super.addView(new WarningLayout(this.getContext(), mAttributeSet, view.getLayoutParams(), view.getClass()));
                 return;
             }
 
             super.addView(view, index, (layoutParams != null ? layoutParams : new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)));
+
+//            if (mDebug) {
+//                Log_d(LOG_TAG, "addView: dumping current hierarchy");
+//                debug(1);
+//            }
         }
 
         @Override
@@ -504,6 +538,17 @@ public class ComponentFramework {
                     }
                 }
             }
+        }
+
+        public void onMenuAction(ComponentMenu.MenuOption menuOption) {
+            Log_d(LOG_TAG, "onMenuAction: ");
+        }
+
+        public boolean onMenuOpen() {
+            Log_d(LOG_TAG, "onMenuOpen: ");
+
+//            if (mBackStack.get(mBackStack.size() - 1))
+            return true;
         }
 
         public String getPreviewMode() {
@@ -754,16 +799,28 @@ public class ComponentFramework {
         }
     }
 
-    public static abstract class MenuLayout extends Child {
+    public static abstract class Menu extends Child {
+
+        public Menu(Context context) {
+            super(context);
+        }
+
+        public Menu(Context context, AttributeSet attributeSet) {
+            super(context, attributeSet);
+        }
+
+        public Menu(Context context, AttributeSet attributeSet, int defStyle) {
+            super(context, attributeSet, defStyle);
+        }
+
+        public abstract boolean isAbsCoordsMatchingMenuHitBox(MotionEvent motionEvent);
+        public abstract void registerMenuOption(int viewId, int optionId, int imageId);
+        public abstract void registerOnMenuOpenListener(ComponentMenu.OnMenuOpenListener onMenuOpenListener);
+    }
+
+    public static class MenuLayout extends Child {
 
         private final String LOG_TAG = "ComponentFramework.MenuLayout";
-
-        protected boolean mDebug = false;
-
-        // layout
-        private String mLayoutResName = "";
-        private int mLayoutResId = UNDEFINED_LAYOUT;
-        private View mLayoutView = null;
 
         public MenuLayout(Context context, AttributeSet attributeSet) {
             super(context, attributeSet);
