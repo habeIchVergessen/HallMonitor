@@ -43,7 +43,7 @@
         android:layout_below="@+id/componentContainer"
         android:layout_centerHorizontal="true"
         android:background="#ff000000"
-        class="org.durka.hallmonitor_framework_test.ComponentMenu"
+        class="org.durka.hallmonitor_framework_test.ComponentFramework$MenuController"
         app:overlayLayout="@+id/componentContainer"
     />
 

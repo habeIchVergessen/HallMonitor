@@ -1,5 +1,6 @@
 package org.durka.hallmonitor_framework_test;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -12,11 +13,13 @@ import android.util.AttributeSet;
 import android.widget.ImageView;
 import android.widget.TextClock;
 
-public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout implements ComponentFramework.OnPauseResumeListener {
+public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout implements ComponentFramework.OnPauseResumeListener, ComponentFramework.MenuController.OnMenuActionListener {
 
     private final String LOG_TAG = "ComponentDefaultHabeIchVergessen";
 
     private TextClock mDefaultTextClock = null;
+
+    private final String TOGGLE_FLASHLIGHT = "net.cactii.flash2.TOGGLE_FLASHLIGHT";
 
     public ComponentDefaultHabeIchVergessen(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
@@ -57,6 +60,42 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
 
     public void onPause() {
         Log_d(LOG_TAG, "onPause");
+    }
+
+    public int getMenuId() {
+        return getId();
+    }
+
+    public void onMenuInit(ComponentFramework.MenuController menuController) {
+        Log_d(LOG_TAG, "onMenuInit:");
+
+        menuController.registerMenuOption(getMenuId(), R.id.camerabutton, R.drawable.ic_notification);
+        menuController.registerMenuOption(getMenuId(), R.id.torchbutton, R.drawable.ic_appwidget_torch_off);
+    }
+
+    public boolean onMenuOpen(ComponentFramework.MenuController.Menu menu) {
+        Log_d(LOG_TAG, "onMenuOpen: ");
+
+        return true;
+    }
+
+    public void onMenuAction(ComponentFramework.MenuController.MenuOption menuOption) {
+        Log_d(LOG_TAG, "onMenuAction: " + menuOption.getOptionId());
+
+        switch (menuOption.getOptionId()) {
+            case R.id.camerabutton:
+                getContainer().getLayoutByResId(R.id.componentCamera).setVisibility(VISIBLE);
+                break;
+            case R.id.torchbutton:
+                Intent intent = new Intent(TOGGLE_FLASHLIGHT);
+                intent.putExtra("strobe", false);
+                intent.putExtra("period", 100);
+                intent.putExtra("bright", false);
+                ((Activity)getContext()).sendBroadcast(intent);
+
+                menuOption.setImageId((menuOption.getImageId() == R.drawable.ic_appwidget_torch_off ? R.drawable.ic_appwidget_torch_on : R.drawable.ic_appwidget_torch_off));
+                break;
+        }
     }
 
     private void updateBatteryStatus() {

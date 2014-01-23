@@ -22,8 +22,8 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
 
         setContentView(R.layout.component_container_test);
 
-        if (getContainer() != null && getMenu() != null)
-            getMenu().registerOnMenuOpenListener(getContainer());
+        if (getContainer() != null && getMenuController() != null)
+            getMenuController().registerOnOpenListener(getContainer());
     }
 
     @Override
@@ -65,8 +65,8 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
         return (ComponentFramework.Container)findViewById(R.id.componentContainer);
     }
 
-    public ComponentFramework.Menu getMenu() {
-        return (ComponentFramework.Menu)findViewById(R.id.componentMenu);
+    public ComponentFramework.MenuController getMenuController() {
+        return (ComponentFramework.MenuController)findViewById(R.id.componentMenu);
     }
 
     public void onShowComponentPhone(View view) {

@@ -1,33 +1,32 @@
 package org.durka.hallmonitor_framework_test;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PointF;
 import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
-import android.preference.Preference;
 import android.preference.PreferenceManager;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ComponentFramework {
 
@@ -53,7 +52,7 @@ public class ComponentFramework {
         private boolean mDebug = false;
 
         public abstract Container getContainer();
-        public abstract Menu getMenu();
+        public abstract MenuController getMenuController();
 
         @Override
         protected void onPause() {
@@ -90,9 +89,19 @@ public class ComponentFramework {
             // DOWN or ACTION_POINTER_DOWN
             if ((actionMasked == MotionEvent.ACTION_DOWN || actionMasked == MotionEvent.ACTION_POINTER_DOWN)) {
                 // menu
-                if (getMenu() != null && getMenu().isAbsCoordsMatchingMenuHitBox(motionEvent) && dispatchTouchEventToView(motionEvent, getMenu())) {
-                    Log_d(LOG_TAG, "dispatchTouchEvent: start tracking menu #" + pointerId);
-                    mTrackedTouchEvent.put(pointerId, getMenu());
+                if (getMenuController() != null && getMenuController().isAbsCoordsMatchingMenuHitBox(motionEvent) && dispatchTouchEventToView(motionEvent, getMenuController())) {
+                    // don't track if container already tracks
+                    if (getContainer() != null && mTrackedTouchEvent.containsValue(getContainer())) {
+                        Log_d(LOG_TAG, "dispatchTouchEvent: excluded from tracking " + pointerId);
+                        mTrackedTouchEvent.put(pointerId, null);
+                    // don't track 2 menu actions
+                    } else if (mTrackedTouchEvent.containsValue(getMenuController())) {
+                        Log_d(LOG_TAG, "dispatchTouchEvent: excluded from tracking " + pointerId);
+                        mTrackedTouchEvent.put(pointerId, null);
+                    } else {
+                        Log_d(LOG_TAG, "dispatchTouchEvent: start tracking menu #" + pointerId);
+                        mTrackedTouchEvent.put(pointerId, getMenuController());
+                    }
                 }
 
                 // container
@@ -101,8 +110,14 @@ public class ComponentFramework {
                     getContainer().getGlobalVisibleRect(visibleRect);
 
                     if (visibleRect.contains((int)pointerCoords.x, (int)pointerCoords.y) && dispatchTouchEventToView(motionEvent, getContainer())) {
-                        Log_d(LOG_TAG, "dispatchTouchEvent: start tracking container #" + pointerId);
-                        mTrackedTouchEvent.put(pointerId, getContainer());
+                        // don't track if menu already tracks
+                        if (getMenuController() != null && mTrackedTouchEvent.containsValue(getMenuController())) {
+                            Log_d(LOG_TAG, "dispatchTouchEvent: excluded from tracking " + pointerId);
+                            mTrackedTouchEvent.put(pointerId, null);
+                        } else {
+                            Log_d(LOG_TAG, "dispatchTouchEvent: start tracking container #" + pointerId);
+                            mTrackedTouchEvent.put(pointerId, getContainer());
+                        }
                     }
                 }
 
@@ -150,31 +165,31 @@ public class ComponentFramework {
             return true;
         }
 
+        private boolean dispatchTouchEventToView(MotionEvent motionEvent, View view) {
+            boolean result = false;
+
+            Rect visibleRect = new Rect();
+            view.getGlobalVisibleRect(visibleRect);
+
+            // send absolute coordinates to menu
+            if (view instanceof MenuController) {
+                result = view.dispatchTouchEvent(motionEvent);
+                // calc relative coordinates (action bar & notification bar!!!) and dispatch
+            } else {
+                MotionEvent dispatch = MotionEvent.obtain(motionEvent);
+                dispatch.offsetLocation(-visibleRect.left, -visibleRect.top);
+                result = view.dispatchTouchEvent(dispatch);
+                dispatch.recycle();
+            }
+
+            return result;
+        }
+
         // helper
         protected void Log_d(String tag, String message) {
             if (mDebug)
                 Log.d(tag, message);
         }
-    }
-
-    private static boolean dispatchTouchEventToView(MotionEvent motionEvent, View view) {
-        boolean result = false;
-
-        Rect visibleRect = new Rect();
-        view.getGlobalVisibleRect(visibleRect);
-
-        // send absolute coordinates to menu
-        if (view instanceof Menu) {
-            result = view.dispatchTouchEvent(motionEvent);
-        // calc relative coordinates (action bar & notification bar!!!) and dispatch
-        } else {
-            MotionEvent dispatch = MotionEvent.obtain(motionEvent);
-            dispatch.offsetLocation(-visibleRect.left, -visibleRect.top);
-            result = view.dispatchTouchEvent(dispatch);
-            dispatch.recycle();
-        }
-
-        return result;
     }
 
     public static class Child extends RelativeLayout {
@@ -286,7 +301,7 @@ public class ComponentFramework {
 
     }
 
-    public static class Container extends Child implements OnPauseResumeListener, ComponentMenu.OnMenuOpenListener {
+    public static class Container extends Child implements OnPauseResumeListener, MenuController.OnMenuOpenListener {
 
         private final String LOG_TAG = "ComponentFramework.Container";
 
@@ -394,11 +409,6 @@ public class ComponentFramework {
             }
 
             super.addView(view, index, (layoutParams != null ? layoutParams : new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)));
-
-//            if (mDebug) {
-//                Log_d(LOG_TAG, "addView: dumping current hierarchy");
-//                debug(1);
-//            }
         }
 
         @Override
@@ -540,15 +550,15 @@ public class ComponentFramework {
             }
         }
 
-        public void onMenuAction(ComponentMenu.MenuOption menuOption) {
-            Log_d(LOG_TAG, "onMenuAction: ");
-        }
+        public MenuController.OnMenuActionListener onMenuOpen() {
+            Log_d(LOG_TAG, "onMenuOpen: #" + mBackStack.size());
 
-        public boolean onMenuOpen() {
-            Log_d(LOG_TAG, "onMenuOpen: ");
+            MenuController.OnMenuActionListener result = null;
 
-//            if (mBackStack.get(mBackStack.size() - 1))
-            return true;
+            if (MenuController.OnMenuActionListener.class.isAssignableFrom(mBackStack.get(mBackStack.size() - 1).getClass()))
+                result = (MenuController.OnMenuActionListener)mBackStack.get(mBackStack.size() - 1);
+
+            return result;
         }
 
         public String getPreviewMode() {
@@ -799,23 +809,634 @@ public class ComponentFramework {
         }
     }
 
-    public static abstract class Menu extends Child {
+    public static class MenuController extends Child {
 
-        public Menu(Context context) {
+        private final static String LOG_TAG = "MenuController";
+
+        private HashMap<Integer,PointF> mOptionMenuTrack = new HashMap<Integer, PointF>();
+        private HashMap<Integer,ImageView> mOptionViews = new HashMap<Integer, ImageView>();
+
+        private int mBackgroundColor = 0xCC000000;
+        private int mButtonSize = 52;
+
+        private final float rX = 50, rY = 30;
+
+        private int mOptionsResourceId = -1;
+        private MenuLayout mOptions = null;
+        private boolean mOptionSnap = true;
+        private ImageView mOptionMenuButton = null;
+        private AnimationDrawable mOptionMenuButtonAnim = null;
+        private ViewGroup mOverlayLayout = null;
+
+        private View mCurrentHighlightedOption = null;
+
+        private HashMap<Integer,Menu> mMenuList = new HashMap<Integer, Menu>();
+        private HashMap<Integer,Option> mOptionList = new HashMap<Integer, Option>();
+        private OnMenuOpenListener mOnMenuOpenListener = null;
+        private OnMenuActionListener mOnMenuActionListener = null;
+
+        public interface OnMenuActionListener {
+            public int getMenuId();
+            public void onMenuInit(MenuController menuController);
+            public boolean onMenuOpen(Menu menu);
+            public void onMenuAction(MenuOption menuOption);
+        }
+
+        public interface OnMenuOpenListener {
+            public OnMenuActionListener onMenuOpen();
+        }
+
+        public class Menu {
+            private HashMap<Integer,Integer> mMenuOptions = new HashMap<Integer, Integer>();
+            private int mViewId;
+
+            protected Menu(int viewId) {
+                mViewId = viewId;
+            }
+
+            protected void addOption(Option option) {
+                if (!mMenuOptions.containsValue(option.getId()))
+                    mMenuOptions.put(mMenuOptions.size(), option.getId());
+            }
+
+            protected Set<Integer> getOptions() {
+                return mMenuOptions.keySet();
+            }
+
+            protected Option getOption(int optionId) {
+                return mOptionList.get(mMenuOptions.get(optionId));
+            }
+
+            protected int getId() {
+                return mViewId;
+            }
+        }
+
+        public class Option {
+            private int mOptionId;
+            private int mImageId;
+            private Object mStateObject;
+
+            protected Option(int optionId, int imageId) {
+                mOptionId = optionId;
+                mImageId = imageId;
+            }
+
+            protected int getId() {
+                return mOptionId;
+            }
+
+            protected Object getStateObject() {
+                return mStateObject;
+            }
+
+            protected void setStateObject(Object stateObject) {
+                mStateObject = stateObject;
+            }
+
+            protected int getImageId() {
+                return mImageId;
+            }
+
+            protected void setImageId(int imageId) {
+                mImageId = imageId;
+            }
+        }
+
+        public class MenuOption {
+            private Menu mMenu;
+            private Option mOption;
+
+            protected MenuOption(Menu menu, Option option) {
+                mMenu = menu;
+                mOption = option;
+            }
+
+            public int getViewId() {
+                return mMenu.getId();
+            }
+
+            public int getOptionId() {
+                return mOption.getId();
+            }
+
+            public Object getStateObject() {
+                return mOption.getStateObject();
+            }
+
+            public void setStateObject(Object stateObject) {
+                mOption.setStateObject(stateObject);
+            }
+
+            public int getImageId() {
+                return mOption.getImageId();
+            }
+
+            public void setImageId(int imageId) {
+                mOption.setImageId(imageId);
+            }
+        }
+
+        public MenuController(Context context) {
             super(context);
         }
 
-        public Menu(Context context, AttributeSet attributeSet) {
+        public MenuController(Context context, AttributeSet attributeSet) {
             super(context, attributeSet);
+
+            initLayout();
         }
 
-        public Menu(Context context, AttributeSet attributeSet, int defStyle) {
+        public MenuController(Context context, AttributeSet attributeSet, int defStyle) {
             super(context, attributeSet, defStyle);
+
+            initLayout();
         }
 
-        public abstract boolean isAbsCoordsMatchingMenuHitBox(MotionEvent motionEvent);
-        public abstract void registerMenuOption(int viewId, int optionId, int imageId);
-        public abstract void registerOnMenuOpenListener(ComponentMenu.OnMenuOpenListener onMenuOpenListener);
+        private void initLayout() {
+            // override layout
+            setClickable(false);
+            setFocusable(false);
+
+            if (mAttributeSet != null) {
+                // read user-defined attributes
+                TypedArray styledAttrs = getContext().obtainStyledAttributes(mAttributeSet, R.styleable.ComponentMenu);
+
+                // read background color (apply alpha)
+                mBackgroundColor = (styledAttrs.getInt(R.styleable.ComponentMenu_overlayBackgroundColor, getBackgroundColor()) & 0xFFFFFF) + 0xCC000000;
+                // read button size
+                mButtonSize = styledAttrs.getInt(R.styleable.ComponentMenu_buttonSize, mButtonSize);
+                // read option snap
+                mOptionSnap = styledAttrs.getBoolean(R.styleable.ComponentMenu_enableOptionSnap, mOptionSnap);
+                // resizing and positioning buttons
+                if ((mOptionsResourceId = styledAttrs.getResourceId(R.styleable.ComponentMenu_overlayLayout, -1)) != -1)
+                    setupOverlayLayout();
+            }
+
+            // set my id
+            setId(R.id.componentMenu);
+
+            // menu button
+            mOptionMenuButton = new ImageView(getContext(), mAttributeSet);
+            mOptionMenuButton.setId(R.id.option_overlay_menu_button);
+            mOptionMenuButton.setAlpha(0.75f);
+            mOptionMenuButton.setClickable(false);
+            mOptionMenuButton.setFocusable(false);
+            mOptionMenuButton.setBackground(getResources().getDrawable(R.drawable.option_overlay_menu_button));
+            addView(mOptionMenuButton);
+
+            // layout
+            RelativeLayout.LayoutParams rlLp = (RelativeLayout.LayoutParams)mOptionMenuButton.getLayoutParams();
+            rlLp.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            rlLp.addRule(RelativeLayout.CENTER_VERTICAL);
+            mOptionMenuButton.setLayoutParams(rlLp);
+
+            // animate menu button
+            mOptionMenuButtonAnim = (AnimationDrawable)mOptionMenuButton.getBackground();
+
+            if (!isInEditMode()) {
+                animateMenuButton(true);
+            }
+        }
+
+        private boolean setupOverlayLayout() {
+            if (isInEditMode()) {
+                setBackgroundColor(0xff000000);
+            }
+
+            if (mOptionsResourceId != -1 && mOptions == null && !isInEditMode()) {
+                Log_d(LOG_TAG, "setupOverlayLayout: " + getResources().getResourceName(mOptionsResourceId));
+
+                View view = getRootView().findViewById(mOptionsResourceId);
+
+                if (view != null && (view instanceof ViewGroup)) {
+                    mOverlayLayout = (ViewGroup)view;
+
+                    // options
+                    mOptions = (MenuLayout)((android.app.Activity)mContext).getLayoutInflater().inflate(R.layout.component_menu, mOverlayLayout, false);
+                    mOverlayLayout.addView(mOptions);
+
+                    // init defaults
+                    closeMenu();
+                    clearSelection(true);
+
+                    // search image view's and process layout
+                    processImageViews();
+                } else
+                    Log_d(LOG_TAG, "setupOverlayLayout: view " + view);
+            }
+
+            return (mOptions != null);
+        }
+
+        @Override
+        public int getId() {
+            return R.id.componentMenu;
+        }
+
+        @Override
+        public void setId(int resourceId) {
+            super.setId(getId());
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent motionEvent) {
+            // not initialized yet
+            if (!setupOverlayLayout())
+                return true;
+
+            // point handling
+            final int actionIndex = motionEvent.getActionIndex();
+            final int actionMasked = motionEvent.getActionMasked();
+            final int pointerId = actionIndex;
+            PointF downPoint = null;
+            double radius = 0;
+
+            // override with absolute coordinates
+            Rect mOptionMenuRect = new Rect();
+            getGlobalVisibleRect(mOptionMenuRect);
+            // coordinates
+            MotionEvent.PointerCoords pointerCoords = new MotionEvent.PointerCoords();
+            motionEvent.getPointerCoords(actionIndex, pointerCoords);
+            // add offset to absolute coordinates
+            pointerCoords.setAxisValue(MotionEvent.AXIS_X, pointerCoords.x + mOptionMenuRect.left);
+            pointerCoords.setAxisValue(MotionEvent.AXIS_Y, pointerCoords.y + mOptionMenuRect.top);
+
+            Log_d(LOG_TAG, "onTouchEvent: " + pointerCoords.x + ":" + pointerCoords.y);
+
+            final float dX = motionEvent.getX(actionIndex), mX = mOptionMenuRect.centerX();
+            final float dY = motionEvent.getY(actionIndex), mY = mOptionMenuRect.centerY();
+
+            switch (actionMasked) {
+                case MotionEvent.ACTION_DOWN:
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    // just handle 1 event
+                    if (mOptionMenuTrack.size() > 0)
+                        break;
+
+                    if (isAbsCoordsMatchingMenuHitBox(mX, mY, dX, dY, rX, rY)) {
+                        mOptionMenuTrack.put(motionEvent.getPointerId(actionIndex), new PointF(mX, mY));
+                        boolean opened = openMenu();
+                        Log_d(LOG_TAG, "opened: " + opened);
+                    }
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    if (isOpen() && (downPoint = mOptionMenuTrack.get(motionEvent.getPointerId(actionIndex))) != null) {
+                        // TODO calc arc's doesn't work properly (until then break here)
+                        if (dY > mY)
+                            break;
+
+                        final double disPoint = Math.sqrt(Math.pow(dX - mX, 2) + Math.pow(dY - mY, 2));
+                        if (disPoint == 0)
+                            break;
+
+                        final double arcPoint = Math.toDegrees(Math.acos((dX - mX) / disPoint));
+
+                        boolean found = false;
+                        // find ImageView at coordinates
+                        Rect hitRect = new Rect();
+                        for (int idx : mOptionViews.keySet()) {
+                            View view = mOptionViews.get(idx);
+
+                            // ignore invisible views
+                            if (view.getVisibility() == View.INVISIBLE)
+                                continue;
+
+                            view.getGlobalVisibleRect(hitRect);
+                            radius = hitRect.centerX() - hitRect.left;
+
+                            final double disCenter =  Math.sqrt(Math.pow(hitRect.centerX() - mX, 2) + Math.pow(hitRect.centerY() - mY, 2));
+                            final double arcCenter = Math.toDegrees(Math.acos((hitRect.centerX() - mX) / disCenter));
+                            final double arcMatch = 360 * radius/(disCenter * 2 * Math.PI);
+
+                            if (disPoint >= disCenter - radius && disPoint <= disCenter + radius && arcPoint >= arcCenter - arcMatch && arcPoint <= arcCenter + arcMatch) {
+//                            Log_d(LOG_TAG, "MOVE: view " + getResources().getResourceName(view.getId()) + " " + view.getWidth() + ":" + view.getHeight());
+                                highlightSelection(view, disCenter, arcCenter, arcMatch);
+                                found = true;
+                                break;
+                            }
+
+                        }
+
+                        // no option selected
+//                    if (!found && (!mOptionSnap || ((Math.pow(mX - dX, 2) / Math.pow(rX, 2) + Math.pow(mY - dY, 2) / Math.pow(rY, 2) <= 1))))
+                        if (!found && (!mOptionSnap || (isAbsCoordsMatchingMenuHitBox(mX, mY, dX, dY, rX, rY))))
+                            clearSelection();
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_POINTER_UP:
+                    if (isOpen() && (downPoint = mOptionMenuTrack.get(motionEvent.getPointerId(actionIndex))) != null) {
+                        mOptionMenuTrack.remove(motionEvent.getPointerId(actionIndex));
+//                    Log_d(LOG_TAG, "UP|POINTER_UP: " + motionEvent.getPointerId(actionIndex) + " #" + mOptionMenuTrack.size());
+
+                        // snap is enabled and option is selected
+                        if (mOptionSnap && mCurrentHighlightedOption != null) {
+                            Log_d(LOG_TAG, "option: " + getResources().getResourceName(mCurrentHighlightedOption.getId()));
+                            fireOnMenuActionListener(mCurrentHighlightedOption);
+                            closeMenu();
+                            break;
+                        }
+
+                        // TODO calc arc's doesn't work properly (until then break here)
+                        if (dY > mY) {
+                            closeMenu();
+                            break;
+                        }
+
+                        // check coordinates
+                        final double disPoint = Math.sqrt(Math.pow(dX - mX, 2) + Math.pow(dY - mY, 2));
+                        if (disPoint == 0)
+                            break;
+
+                        final double arcPoint = Math.toDegrees(Math.acos((dX - mX) / disPoint));
+
+                        // find ImageView at coordinates
+                        Rect hitRect = new Rect();
+                        for (int idx : mOptionViews.keySet()) {
+                            View view = mOptionViews.get(idx);
+
+                            // ignore invisible views
+                            if (view.getVisibility() == View.INVISIBLE)
+                                continue;
+
+                            view.getGlobalVisibleRect(hitRect);
+                            radius = hitRect.centerX() - hitRect.left;
+
+                            final double disCenter =  Math.sqrt(Math.pow(hitRect.centerX() - mX, 2) + Math.pow(hitRect.centerY() - mY, 2));
+                            final double arcCenter = Math.toDegrees(Math.acos((hitRect.centerX() - mX) / disCenter));
+                            final double arcMatch = 360 * radius / (disCenter * 2 * Math.PI);
+
+                            if (disPoint >= disCenter - radius && disPoint <= disCenter + radius && arcPoint >= arcCenter - arcMatch && arcPoint <= arcCenter + arcMatch) {
+                                fireOnMenuActionListener(view);
+                                closeMenu();
+                                break;
+                            }
+                        }
+                    }
+                    closeMenu();
+                    break;
+            }
+
+            return true;
+        }
+
+        public boolean isAbsCoordsMatchingMenuHitBox(MotionEvent motionEvent) {
+            boolean result = false;
+
+            final int actionIndex = motionEvent.getActionIndex(), actionMasked = motionEvent.getActionMasked();
+
+            // absolute coordinates
+            Rect mOptionMenuRect = new Rect();
+            getGlobalVisibleRect(mOptionMenuRect);
+            // coordinates
+            MotionEvent.PointerCoords pointerCoords = new MotionEvent.PointerCoords();
+            motionEvent.getPointerCoords(actionIndex, pointerCoords);
+
+            final float dX = motionEvent.getX(actionIndex), mX = mOptionMenuRect.centerX();
+            final float dY = motionEvent.getY(actionIndex), mY = mOptionMenuRect.centerY();
+
+            return isAbsCoordsMatchingMenuHitBox(mX, mY, dX, dY, rX, rY);
+        }
+
+        private boolean isAbsCoordsMatchingMenuHitBox(final float mX, final float mY, final float dX, final float dY, final float rX, final float rY) {
+            // ellipse
+            return (Math.pow(mX - dX, 2) / Math.pow(rX, 2) + Math.pow(mY - dY, 2) / Math.pow(rY, 2) <= 1);
+        }
+
+        public boolean isOpen() {
+            return (mOptions.getVisibility() == View.VISIBLE);
+        }
+
+        public void animateMenuButton(boolean animate) {
+            if (animate)
+                mOptionMenuButtonAnim.start();
+            else
+                mOptionMenuButtonAnim.stop();
+        }
+
+        private boolean openMenu() {
+            Log_d(LOG_TAG, "openMenu");
+
+            if (mOnMenuOpenListener == null || (mOnMenuActionListener = mOnMenuOpenListener.onMenuOpen()) == null) {
+                Log_d(LOG_TAG, "openMenu: " + mOnMenuOpenListener + ", " + mOnMenuActionListener);
+                return false;
+            }
+
+            if (!mMenuList.containsKey(mOnMenuActionListener.getMenuId()))
+                mOnMenuActionListener.onMenuInit(this);
+
+            Menu menu = mMenuList.get(mOnMenuActionListener.getMenuId());
+
+            if (menu == null || menu.getOptions().size() == 0 || !mOnMenuActionListener.onMenuOpen(menu)) {
+                Log_d(LOG_TAG, "openMenu: canceled. " + menu);
+                return false;
+            }
+
+            setupMenu(menu);
+
+            mOptions.setVisibility(View.VISIBLE);
+            mOverlayLayout.bringChildToFront(mOptions);
+            mOverlayLayout.requestLayout();
+            mOverlayLayout.invalidate();
+
+            return true;
+        }
+
+        private void closeMenu() {
+            Log_d(LOG_TAG, "closeMenu");
+
+            clearSelection();
+            mOptions.setVisibility(View.INVISIBLE);
+        }
+
+        private void processImageViews() {
+            processImageViews(mOptions, false);
+        }
+
+        private void processImageViews(RelativeLayout layout, boolean recursive) {
+            Log_d(LOG_TAG, "processImageViews: " + recursive + ", " + layout);
+
+            for (int idx=0; idx < layout.getChildCount(); idx++) {
+                // image view's
+                if (layout.getChildAt(idx) instanceof ImageView) {
+                    ImageView img = (ImageView) layout.getChildAt(idx);
+                    addImageViewToHashMap(img);
+
+                    if (!recursive)
+                        ((RelativeLayout.LayoutParams)img.getLayoutParams()).setMargins(0, (int)(mOverlayLayout.getHeight() - mButtonSize * 2.30f), 0, 0);
+                }
+                // text view's
+                if ((layout.getChildAt(idx) instanceof TextView)) {
+                    TextView textView = (TextView)layout.getChildAt(idx);
+                    int padding = 0, spacing = 0;
+                    switch (textView.getId()) {
+                        case R.id.spacer_2_3:
+                            padding = (int)(mButtonSize * 0.90f);
+                            spacing = (int)(mButtonSize * 2.00f);
+                            break;
+                        case R.id.spacer_4_5:
+                            padding = (int)(mButtonSize * 2.00f);
+                            spacing = (int)(mButtonSize * 1.00f);
+                            break;
+                        case R.id.spacer_6_7:
+                            padding = (int)(mButtonSize * 0.45f);
+                            spacing = (int)(mButtonSize * 3.20f);
+                            break;
+                        case R.id.spacer_8_9:
+                            padding = (int)(mButtonSize * 2.00f);
+                            spacing = (int)(mButtonSize * 2.20f);
+                            break;
+                    }
+                    if (padding > 0)
+                        textView.setPadding(padding, 0, padding, 0);
+                    if (spacing > 0)
+                        ((RelativeLayout.LayoutParams)layout.getLayoutParams()).setMargins(0, mOverlayLayout.getHeight() - spacing, 0, 0);
+                }
+                // relative layout's
+                if ((layout.getChildAt(idx) instanceof RelativeLayout) && !recursive)
+                    processImageViews((RelativeLayout)layout.getChildAt(idx), true);
+            }
+        }
+
+        private void addImageViewToHashMap(ImageView imageView) {
+            mOptionViews.put(mOptionViews.size(), imageView);
+
+            imageView.getLayoutParams().width = mButtonSize;
+            imageView.getLayoutParams().height = mButtonSize;
+            imageView.setAlpha(0.75f);
+            imageView.setClickable(false);
+            imageView.setFocusable(false);
+        }
+
+        private void highlightSelection(View view, double disCenter, double arcCenter, double arcMatch) {
+            if (mCurrentHighlightedOption != view) {
+                Log_d(LOG_TAG, "highlightSelection: " + getResources().getResourceName(view.getId()));
+
+                mCurrentHighlightedOption = view;
+
+                Bitmap bmp = Bitmap.createBitmap(mOptions.getWidth(), mOptions.getHeight(), Bitmap.Config.ARGB_8888);
+//            Log_d(LOG_TAG, "view: " + view.getLeft() + ":" + view.getTop() + " - " + view.getWidth() + ":" + view.getHeight());
+
+                // translate coordinates
+                final float radius = view.getHeight() / 2, snap = 20f, stroke = 5f;
+                Rect viewRect = new Rect(), drawRect = new Rect();
+                view.getGlobalVisibleRect(viewRect);
+                mOptions.getGlobalVisibleRect(drawRect);
+
+//            Log_d(LOG_TAG, "draw: " + drawRect.left + ":" + drawRect.bottom + ", " + mOptions.getLeft() + ":" + mOptions.getBottom());
+
+                PointF drawCenter = new PointF(mOptions.getWidth() / 2, mOptions.getBottom() + getHeight() / 2);
+                PointF viewCenter = new PointF(viewRect.left - drawRect.left + radius, viewRect.top - drawRect.top + radius);
+
+                PointF viewCenterTop = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, 0f, radius);
+                PointF viewLeftTop = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)arcMatch, radius + snap);
+                PointF viewRightTop = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)-arcMatch, radius + snap);
+                // circular segment
+//            PointF viewLeftBottom = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)arcMatch, -radius);
+//            PointF viewRightBottom = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)-arcMatch, -radius);
+                // arrow to center
+                PointF viewLeftBottom = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)arcMatch, radius + snap / 2);
+                PointF viewRightBottom = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)-arcMatch, radius + snap / 2);
+
+                Path path = new Path();
+                path.moveTo(viewLeftTop.x, viewLeftTop.y);
+                final float drawRadiusTop = (float)(disCenter + radius + snap);
+                path.arcTo(new RectF(drawCenter.x - drawRadiusTop, drawCenter.y - drawRadiusTop, drawCenter.x + drawRadiusTop, drawCenter.y + drawRadiusTop), (float) -(arcCenter + arcMatch), (float) arcMatch * 2, true);
+                path.lineTo(viewRightBottom.x, viewRightBottom.y);
+                // circular segment
+//            final float drawRadiusBottom = (float)(disCenter - radius);
+//            path.arcTo(new RectF(drawCenter.x - drawRadiusBottom, drawCenter.y - drawRadiusBottom, drawCenter.x + drawRadiusBottom, drawCenter.y + drawRadiusBottom), (float) -(arcCenter - arcMatch), (float) -arcMatch * 2, true);
+                // arrow to center
+                path.lineTo(viewCenterTop.x, viewCenterTop.y);
+                path.lineTo(viewLeftBottom.x, viewLeftBottom.y);
+                // closeMenu path
+                path.lineTo(viewLeftTop.x, viewLeftTop.y);
+
+                // draw area
+                Paint paint = new Paint();
+                paint.setARGB(150, 255, 255, 255);
+                paint.setAntiAlias(true);
+                paint.setStyle(Paint.Style.FILL);
+
+                Canvas c = new Canvas(bmp);
+                c.drawColor(mBackgroundColor);
+                c.drawPath(path, paint);
+
+                // draw border
+                paint.setARGB(200, 255, 255, 255);
+                paint.setStrokeWidth(stroke);
+                paint.setStrokeCap(Paint.Cap.ROUND);
+                paint.setStyle(Paint.Style.STROKE);
+
+                c.drawPath(path, paint);
+
+                mOptions.setBackground(new BitmapDrawable(getResources(), bmp));
+            }
+        }
+
+        private void clearSelection() {
+            clearSelection(false);
+        }
+
+        private void clearSelection(boolean force) {
+            if (mCurrentHighlightedOption != null || force) {
+                Log_d(LOG_TAG, "clearSelection: " + force);
+                mOptions.setBackgroundColor(mBackgroundColor);
+                mCurrentHighlightedOption = null;
+            }
+        }
+
+        private static class OptionMenuHelper {
+            public static PointF movePointOnCircularSegment(PointF center, PointF reference, Float arc, Float offset) {
+                PointF result = new PointF(0, 0);
+
+                final double radius = Math.sqrt(Math.pow(reference.x - center.x, 2) + Math.pow(reference.y - center.y, 2));
+                final double arcC = Math.toDegrees(Math.acos((reference.x - center.x) / radius));
+                final double factor = (radius + offset) / radius;
+
+                result.x = (float)(center.x + factor * radius * Math.cos(Math.toRadians(arcC + arc)));
+                result.y = (float)(center.y - factor * radius * Math.sin(Math.toRadians(arcC + arc)));
+
+//            Log_d(LOG_TAG, "center: " + center + ", reference: " + reference + ", radius: " + radius + ", arcC: " + arcC + ", arc: " + arc + ", result: " + result);
+
+                return result;
+            }
+        }
+
+        private void fireOnMenuActionListener(View view) {
+            if (mOnMenuActionListener != null && view.getTag() != null)
+                mOnMenuActionListener.onMenuAction((MenuOption)view.getTag());
+        }
+
+        private boolean setupMenu(Menu menu) {
+            for (int idx=0; idx<mOptionViews.size(); idx++) {
+                ImageView imageView = (ImageView)mOptionViews.values().toArray()[idx];
+                Option option = menu.getOption(idx);
+
+                imageView.setVisibility((option == null ? INVISIBLE : VISIBLE));
+                imageView.setTag((option == null ? null : new MenuOption(menu, option)));
+                if (option != null)
+                    imageView.setImageDrawable(getResources().getDrawable(option.getImageId()));
+            }
+
+            return true;
+        }
+
+        public void registerMenuOption(int menuResId, int optionResId, int drawableResId) {
+            Menu menu = mMenuList.get(menuResId);
+
+            if (menu == null)
+                mMenuList.put(menuResId, (menu = new Menu(menuResId)));
+
+            Option option = new Option(optionResId, drawableResId);
+            menu.addOption(option);
+            mOptionList.put(optionResId, option);
+        }
+
+        public void registerOnOpenListener(OnMenuOpenListener menuOpenListener) {
+            mOnMenuOpenListener = menuOpenListener;
+        }
     }
 
     public static class MenuLayout extends Child {
