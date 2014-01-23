@@ -72,6 +72,11 @@ public class ComponentFramework {
                 getContainer().setDebugMode((mDebug = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_dev_opts_debug", false)));
                 getContainer().onResume();
             }
+            // propagate to menu
+            if (getMenuController() != null) {
+                getMenuController().setDebugMode(mDebug);
+            }
+
         }
 
         @Override
@@ -166,21 +171,18 @@ public class ComponentFramework {
         }
 
         private boolean dispatchTouchEventToView(MotionEvent motionEvent, View view) {
-            boolean result = false;
+            // send absolute coordinates to menu
+            if (view instanceof MenuController)
+                return view.dispatchTouchEvent(motionEvent);
 
+            // calc relative coordinates (action bar & notification bar!!!) and dispatch
             Rect visibleRect = new Rect();
             view.getGlobalVisibleRect(visibleRect);
 
-            // send absolute coordinates to menu
-            if (view instanceof MenuController) {
-                result = view.dispatchTouchEvent(motionEvent);
-                // calc relative coordinates (action bar & notification bar!!!) and dispatch
-            } else {
-                MotionEvent dispatch = MotionEvent.obtain(motionEvent);
-                dispatch.offsetLocation(-visibleRect.left, -visibleRect.top);
-                result = view.dispatchTouchEvent(dispatch);
-                dispatch.recycle();
-            }
+            MotionEvent dispatch = MotionEvent.obtain(motionEvent);
+            dispatch.offsetLocation(-visibleRect.left, -visibleRect.top);
+            boolean result = view.dispatchTouchEvent(dispatch);
+            dispatch.recycle();
 
             return result;
         }
@@ -189,6 +191,11 @@ public class ComponentFramework {
         protected void Log_d(String tag, String message) {
             if (mDebug)
                 Log.d(tag, message);
+        }
+
+        protected void Log_e(String tag, String message) {
+            if (mDebug)
+                Log.e(tag, "uups: " + message);
         }
     }
 
@@ -264,6 +271,10 @@ public class ComponentFramework {
         protected void Log_d(String tag, String message) {
             if (mDebug)
                 Log.d(tag, message);
+        }
+
+        protected void Log_e(String tag, String message) {
+                Log.e(tag, "uups: " + message);
         }
 
         protected int getPrefInt(String prefName, int defaultValue) {
@@ -487,8 +498,8 @@ public class ComponentFramework {
 
         @Override
         final public void setDebugMode(boolean debugMode) {
-            Log_d(LOG_TAG, "setDebugMode: " + debugMode + ", #" + getChildCount());
             super.setDebugMode(debugMode);
+            Log_d(LOG_TAG, "setDebugMode: " + debugMode + ", #" + getChildCount());
 
             // propagate to child views
             for (int idx=0; idx<getChildCount(); idx++) {
@@ -1040,7 +1051,13 @@ public class ComponentFramework {
         }
 
         @Override
-        public boolean onTouchEvent(MotionEvent motionEvent) {
+        final public boolean dispatchTouchEvent(MotionEvent motionEvent) {
+            Log_d(LOG_TAG, "dispatchTouchEvent: ");
+            return onTouchEvent(motionEvent);
+        }
+
+        @Override
+        final public boolean onTouchEvent(MotionEvent motionEvent) {
             // not initialized yet
             if (!setupOverlayLayout())
                 return true;
@@ -1062,7 +1079,7 @@ public class ComponentFramework {
             pointerCoords.setAxisValue(MotionEvent.AXIS_X, pointerCoords.x + mOptionMenuRect.left);
             pointerCoords.setAxisValue(MotionEvent.AXIS_Y, pointerCoords.y + mOptionMenuRect.top);
 
-            Log_d(LOG_TAG, "onTouchEvent: " + pointerCoords.x + ":" + pointerCoords.y);
+//            Log_d(LOG_TAG, "onTouchEvent: " + pointerCoords.x + ":" + pointerCoords.y + ", tracked #" + mOptionMenuTrack.size() + ", " + motionEvent.getPointerId(actionIndex));
 
             final float dX = motionEvent.getX(actionIndex), mX = mOptionMenuRect.centerX();
             final float dY = motionEvent.getY(actionIndex), mY = mOptionMenuRect.centerY();
@@ -1077,7 +1094,6 @@ public class ComponentFramework {
                     if (isAbsCoordsMatchingMenuHitBox(mX, mY, dX, dY, rX, rY)) {
                         mOptionMenuTrack.put(motionEvent.getPointerId(actionIndex), new PointF(mX, mY));
                         boolean opened = openMenu();
-                        Log_d(LOG_TAG, "opened: " + opened);
                     }
                     break;
                 case MotionEvent.ACTION_MOVE:
@@ -1126,9 +1142,9 @@ public class ComponentFramework {
                     break;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_POINTER_UP:
-                    if (isOpen() && (downPoint = mOptionMenuTrack.get(motionEvent.getPointerId(actionIndex))) != null) {
+                    if ((downPoint = mOptionMenuTrack.get(motionEvent.getPointerId(actionIndex))) != null) {
                         mOptionMenuTrack.remove(motionEvent.getPointerId(actionIndex));
-//                    Log_d(LOG_TAG, "UP|POINTER_UP: " + motionEvent.getPointerId(actionIndex) + " #" + mOptionMenuTrack.size());
+//                      Log_d(LOG_TAG, "UP|POINTER_UP: " + motionEvent.getPointerId(actionIndex) + " #" + mOptionMenuTrack.size());
 
                         // snap is enabled and option is selected
                         if (mOptionSnap && mCurrentHighlightedOption != null) {
@@ -1223,17 +1239,22 @@ public class ComponentFramework {
                 return false;
             }
 
-            if (!mMenuList.containsKey(mOnMenuActionListener.getMenuId()))
-                mOnMenuActionListener.onMenuInit(this);
+            try {
+                if (!mMenuList.containsKey(mOnMenuActionListener.getMenuId()))
+                    mOnMenuActionListener.onMenuInit(this);
 
-            Menu menu = mMenuList.get(mOnMenuActionListener.getMenuId());
+                Menu menu = mMenuList.get(mOnMenuActionListener.getMenuId());
 
-            if (menu == null || menu.getOptions().size() == 0 || !mOnMenuActionListener.onMenuOpen(menu)) {
-                Log_d(LOG_TAG, "openMenu: canceled. " + menu);
+                if (menu == null || menu.getOptions().size() == 0 || !mOnMenuActionListener.onMenuOpen(menu)) {
+                    Log_d(LOG_TAG, "openMenu: canceled. " + menu);
+                    return false;
+                }
+
+                setupMenu(menu);
+            } catch (Exception e) {
+                Log_e(LOG_TAG, "openMenu: exception occurred! " + e.getMessage());
                 return false;
             }
-
-            setupMenu(menu);
 
             mOptions.setVisibility(View.VISIBLE);
             mOverlayLayout.bringChildToFront(mOptions);
@@ -1387,26 +1408,13 @@ public class ComponentFramework {
             }
         }
 
-        private static class OptionMenuHelper {
-            public static PointF movePointOnCircularSegment(PointF center, PointF reference, Float arc, Float offset) {
-                PointF result = new PointF(0, 0);
-
-                final double radius = Math.sqrt(Math.pow(reference.x - center.x, 2) + Math.pow(reference.y - center.y, 2));
-                final double arcC = Math.toDegrees(Math.acos((reference.x - center.x) / radius));
-                final double factor = (radius + offset) / radius;
-
-                result.x = (float)(center.x + factor * radius * Math.cos(Math.toRadians(arcC + arc)));
-                result.y = (float)(center.y - factor * radius * Math.sin(Math.toRadians(arcC + arc)));
-
-//            Log_d(LOG_TAG, "center: " + center + ", reference: " + reference + ", radius: " + radius + ", arcC: " + arcC + ", arc: " + arc + ", result: " + result);
-
-                return result;
-            }
-        }
-
         private void fireOnMenuActionListener(View view) {
             if (mOnMenuActionListener != null && view.getTag() != null)
-                mOnMenuActionListener.onMenuAction((MenuOption)view.getTag());
+                try {
+                    mOnMenuActionListener.onMenuAction((MenuOption)view.getTag());
+                } catch (Exception e) {
+                    Log_e(LOG_TAG, "fireOnMenuActionListener: exception occurred! " + e.getMessage());
+                }
         }
 
         private boolean setupMenu(Menu menu) {
@@ -1437,6 +1445,23 @@ public class ComponentFramework {
         public void registerOnOpenListener(OnMenuOpenListener menuOpenListener) {
             mOnMenuOpenListener = menuOpenListener;
         }
+
+        private static class OptionMenuHelper {
+            public static PointF movePointOnCircularSegment(PointF center, PointF reference, Float arc, Float offset) {
+                PointF result = new PointF(0, 0);
+
+                final double radius = Math.sqrt(Math.pow(reference.x - center.x, 2) + Math.pow(reference.y - center.y, 2));
+                final double arcC = Math.toDegrees(Math.acos((reference.x - center.x) / radius));
+                final double factor = (radius + offset) / radius;
+
+                result.x = (float)(center.x + factor * radius * Math.cos(Math.toRadians(arcC + arc)));
+                result.y = (float)(center.y - factor * radius * Math.sin(Math.toRadians(arcC + arc)));
+
+//            Log_d(LOG_TAG, "center: " + center + ", reference: " + reference + ", radius: " + radius + ", arcC: " + arcC + ", arc: " + arc + ", result: " + result);
+
+                return result;
+            }
+        }
     }
 
     public static class MenuLayout extends Child {
@@ -1447,4 +1472,5 @@ public class ComponentFramework {
             super(context, attributeSet);
         }
     }
+
 }
