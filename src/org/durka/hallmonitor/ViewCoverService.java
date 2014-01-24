@@ -69,7 +69,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 
     @Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.d("VCS.onStartCommand", "View cover service started");
+		Log_d("VCS.onStartCommand", "View cover service started");
 
         //We don't want to do this - almost by defninition the cover can't be closed, and we don't actually want to do any open cover functionality
 		//until the cover is closed and then opened again
@@ -83,11 +83,11 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 		
 		mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_NORMAL);
 		
-//		Log.d("VCS-oSC", "scanning keyboards...");
+//		Log_d("VCS-oSC", "scanning keyboards...");
 //		InputManager im = (InputManager) getSystemService(INPUT_SERVICE);
 //		for (int id : im.getInputDeviceIds()) {
 //			InputDevice dev = im.getInputDevice(id);
-//			Log.d("VCS-oSC", "\t" + dev.toString());
+//			Log_d("VCS-oSC", "\t" + dev.toString());
 //		}
 		
 		mHeadset = new HeadsetReceiver();
@@ -115,7 +115,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 	
 	@Override
 	public void onDestroy() {
-		Log.d("VCS.onStartCommand", "View cover service stopped");
+		Log_d("VCS.onStartCommand", "View cover service stopped");
 		
 		//unregisterReceiver(receiver);
 		mSensorManager.unregisterListener(this);
@@ -130,14 +130,14 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 	@Override
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
 		// I don't care
-		Log.d(LOG_TAG + "onAccuracyChanged", "OnAccuracyChanged: Sensor=" + sensor.getName() + ", accuracy=" + accuracy);
+		Log_d(LOG_TAG + "onAccuracyChanged", "OnAccuracyChanged: Sensor=" + sensor.getName() + ", accuracy=" + accuracy);
 	}
 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		
 		if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {	
-			Log.d(LOG_TAG + ".onSensorChanged", "Proximity sensor changed, value=" + event.values[0]);
+			Log_d(LOG_TAG + ".onSensorChanged", "Proximity sensor changed, value=" + event.values[0]);
 			Functions.Events.proximity(this, event.values[0]);
 			
 			//improve reliability by refiring the event 200ms afterwards
@@ -172,16 +172,16 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     {
         switch (initStatus) {
             case TextToSpeech.SUCCESS:
-                Log.d(LOG_TAG, "init Text To Speech successed");
+                Log_d(LOG_TAG, "init Text To Speech successed");
                 //mTts.setLanguage(Locale.GERMANY);
                 mTtsInitComplete = true;
                 break;
             case TextToSpeech.ERROR:
-                Log.d(LOG_TAG, "init Text To Speech failed");
+                Log_d(LOG_TAG, "init Text To Speech failed");
                 mTts = null;
                 break;
             default:
-                Log.d(LOG_TAG, "onInit: " + initStatus);
+                Log_d(LOG_TAG, "onInit: " + initStatus);
                 break;
         }
     }
@@ -225,7 +225,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
                     mTts.playSilence(delay, TextToSpeech.QUEUE_ADD, params);
                 // play
                 result = (mTts.speak(text, TextToSpeech.QUEUE_ADD, params) == TextToSpeech.SUCCESS);
-                //Log.d(LOG_TAG, "sendTextToSpeech: text = '" + text.replaceAll(".", "*") + "' (" + delay + " ms) -> " + (result ? "ok" : "failed"));
+                Log_d(LOG_TAG, "sendTextToSpeech: text = '" + text.replaceAll(".", "*") + "' (" + delay + " ms) -> " + (result ? "ok" : "failed"));
             }
         }
 
@@ -247,4 +247,9 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     /**
      * Text-To-Speech (end)
      */
+
+    private void Log_d(String tag, String message) {
+        if (PreferenceManager.getDefaultSharedPreferences(getBaseContext()).getBoolean("pref_dev_opts_debug", false))
+            Log.d(tag, message);
+    }
 }

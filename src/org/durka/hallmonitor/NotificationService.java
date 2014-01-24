@@ -72,13 +72,14 @@ public class NotificationService extends NotificationListenerService {
         if (PreferenceManager.getDefaultSharedPreferences(getBaseContext()).getBoolean("pref_dev_opts_debug", false))
             Log.d(tag, message);
     }
+
 	@Override
 	public StatusBarNotification[] getActiveNotifications() {
 		StatusBarNotification[] notifs = super.getActiveNotifications();
 		
 		List<StatusBarNotification> acc = new ArrayList<StatusBarNotification>(notifs.length);
 		for (StatusBarNotification sbn : notifs) {
-			Log.d("NS-gAN", sbn.getPackageName());
+			Log_d("NS-gAN", sbn.getPackageName());
 			if (!blacklist.contains(sbn.getPackageName())) {
 				acc.add(sbn);
 			}
