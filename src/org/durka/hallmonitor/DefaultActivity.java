@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.media.AudioManager;
 import android.graphics.PorterDuff;
@@ -312,13 +313,21 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
 	}
 
     @Override
-    public boolean onTouchEvent(MotionEvent motionEvent)
+    public boolean dispatchTouchEvent(MotionEvent motionEvent)
     {
-        boolean result = true;
+        boolean result = false;
 
         // event handling phoneWidget
-        if (mPhoneWidget.isShowPhoneWidget())
-            result = mPhoneWidget.onTouchEvent_PhoneWidgetHandler(motionEvent);
+        if (mPhoneWidget.isShowPhoneWidget()) {
+            Rect phoneRect = new Rect();
+            mPhoneWidget.getGlobalVisibleRect(phoneRect);
+
+            if (phoneRect.contains((int)motionEvent.getX(), (int)motionEvent.getY()))
+                result = mPhoneWidget.onTouchEvent_PhoneWidgetHandler(motionEvent);
+        }
+
+        if (!result)
+            super.dispatchTouchEvent(motionEvent);
 
         return result;
     }
