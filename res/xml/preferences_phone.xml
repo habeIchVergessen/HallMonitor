@@ -31,8 +31,8 @@
             android:summary="@string/pref_phone_preview_summary">
             <intent
                 android:action="android.intent.action.VIEW"
-                android:targetPackage="org.durka.hallmonitor"
-                android:targetClass="org.durka.hallmonitor.DefaultActivity">
+                android:targetPackage="org.durka.hallmonitor_framework_test"
+                android:targetClass="org.durka.hallmonitor_framework_test.DefaultActivity">
                 <extra
                     android:name="preview"
                     android:value="phoneWidget"

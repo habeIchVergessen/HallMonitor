@@ -49,18 +49,20 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
             Context context = getActivity().getApplicationContext();
 
             // debug
-            if (mDebug)
-                Toast.makeText(getActivity(), "debug is enabled!", Toast.LENGTH_LONG).show();
-
+            mDebug = getPreferenceManager().getSharedPreferences().getBoolean("pref_dev_opts_debug", mDebug);
             final int resourceId = context.getResources().getIdentifier(resourceName, "xml", context.getPackageName());
 
             PreferenceManager.setDefaultValues(getActivity(), resourceId, false);
             addPreferencesFromResource(resourceId);
+
+            if (mDebug && findPreference("pref_about") != null)
+                Toast.makeText(getActivity(), "debug is enabled!", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
             Log_d(LOG_TAG, "onCreate: exception occurred! " + e.getMessage());
         }
 
         // setup about preference for debug
+        SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
         Preference about = findPreference("pref_about");
         if (about != null) {
             // init onClick listener
@@ -69,12 +71,12 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
             about.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
                 @Override
                 public boolean onPreferenceClick(Preference preference) {
+                    SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
                     mAboutClicked += 1;
                     if (mAboutClicked == mAboutClickCount) {
                         mAboutClicked = 0;
-                        SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
-                        boolean debug = !prefs.getBoolean("pref_dev_opts_debug", false);
-                        prefs.edit().putBoolean("pref_dev_opts_debug", debug).commit();
+                        mDebug = !prefs.getBoolean("pref_dev_opts_debug", false);
+                        prefs.edit().putBoolean("pref_dev_opts_debug", mDebug).commit();
                         Toast.makeText(getActivity(), "debug is " + (prefs.getBoolean("pref_dev_opts_debug", false) ? "enabled" : "disabled") + " now!", Toast.LENGTH_LONG).show();
                     }
 
@@ -89,6 +91,10 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
 
         // reset counter when new fragment is loaded
         mAboutClicked = 0;
+
+        // phone control
+        enablePhoneScreen(prefs);
+        updatePhoneControlTtsDelay(prefs);
     }
 
     @Override
@@ -204,6 +210,7 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
         enablePhoneScreen(prefs);
     }
 
+
     private void updatePhoneControlTtsDelay(SharedPreferences prefs) {
         Preference preference = findPreference("pref_phone_controls_tts_delay");
 
@@ -217,7 +224,7 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
         boolean phoneControlConfig = prefs.getBoolean("pref_phone_controls", false);
         Preference phoneControl = findPreference("pref_phone_controls_user");
 
-        if (phoneControlConfig != phoneControlState && phoneControl != null)
+        if (phoneControl != null && (phoneControlConfig != phoneControlState || phoneControl.isEnabled() != phoneControlState))
             phoneControl.setEnabled(phoneControlState);
         if (phoneControlConfig != (phoneControlState && prefs.getBoolean("pref_phone_controls_user", false)))
             prefs.edit().putBoolean("pref_phone_controls", !phoneControlConfig).commit();

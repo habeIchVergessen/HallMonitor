@@ -15,8 +15,13 @@
 
     <!-- menu -->
     <item type="id" name="componentMenu" />
+
     <!-- id's used by dynamically generated view inside ComponentMenu -->
     <item type="id" name="option_overlay_menu"/>
     <item type="id" name="option_overlay_menu_button"/>
     <item type="id" name="option_overlay"/>
+
+    <item type="id" name="dumpApplicationState" />
+    <item type="id" name="restartApplication" />
+
 </resources>

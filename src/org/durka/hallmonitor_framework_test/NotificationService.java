@@ -15,6 +15,7 @@
 package org.durka.hallmonitor_framework_test;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import android.preference.PreferenceManager;
@@ -26,16 +27,24 @@ import android.service.notification.StatusBarNotification;
 public class NotificationService extends NotificationListenerService {
 	
 	public static NotificationService that = null;
-	
+
 	private final List<String> blacklist = new ArrayList<String>() {{
 			add("net.cactii.flash2"); // we have our own flashlight UI
 			add("android");           // this covers the keyboard selection notification, but does it clobber others too? TODO
 	}};
-	
+
+    private HashSet<OnNotificationChangedListener> mOnNotificationChangedListeners = null;
+
+    public interface OnNotificationChangedListener {
+        public void onNotificationChanged();
+    }
+
 	@Override
 	public void onCreate() {
 		Log_d("NS-oC", "ohai");
 		that = this;
+
+        mOnNotificationChangedListeners = new HashSet<OnNotificationChangedListener>();
 	}
 	
 	@Override
@@ -46,24 +55,31 @@ public class NotificationService extends NotificationListenerService {
 	
 	@Override
 	public void onNotificationPosted(StatusBarNotification sbn) {
-		Log_d("NS-oNP", "notification posted: " + sbn.toString());
-		if (DefaultActivity.on_screen) {
-			Functions.Actions.refresh_notifications();
-		}
+        for (OnNotificationChangedListener onNotificationChangedListener : mOnNotificationChangedListeners) {
+            onNotificationChangedListener.onNotificationChanged();
+        }
 	}
 
 	@Override
 	public void onNotificationRemoved(StatusBarNotification sbn) {
-		Log_d("NS-oNR", "notification removed: " + sbn.toString());
-		if (DefaultActivity.on_screen) {
-			Functions.Actions.refresh_notifications();
-		}
+        for (OnNotificationChangedListener onNotificationChangedListener : mOnNotificationChangedListeners) {
+            onNotificationChangedListener.onNotificationChanged();
+        }
 	}
-	
-	private void Log_d(String tag, String message) {
+
+    public void registerOnNotificationChangedListener(OnNotificationChangedListener onNotificationChangedListener) {
+        mOnNotificationChangedListeners.add(onNotificationChangedListener);
+    }
+
+    public void unregisterOnNotificationChangedListener(OnNotificationChangedListener onNotificationChangedListener) {
+        mOnNotificationChangedListeners.add(onNotificationChangedListener);
+    }
+
+    private void Log_d(String tag, String message) {
         if (PreferenceManager.getDefaultSharedPreferences(getBaseContext()).getBoolean("pref_dev_opts_debug", false))
             Log.d(tag, message);
     }
+
 	@Override
 	public StatusBarNotification[] getActiveNotifications() {
 		StatusBarNotification[] notifs = super.getActiveNotifications();

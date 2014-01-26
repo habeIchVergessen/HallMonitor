@@ -35,13 +35,26 @@ public class ComponentFramework {
         public void onResume();
     }
 
+    public interface OnStopListener {
+        public void onStop();
+    }
+
     public interface OnScreenOffTimerListener {
         public boolean onStartScreenOffTimer();
         public boolean onStopScreenOffTimer();
     }
 
+    public interface OnWakeUpScreenListener {
+        public void onWakeUpScreen();
+    }
+
     public interface OnPreviewComponentListener {
         public boolean onPreviewComponent();
+    }
+
+    public interface OnKeepOnScreen {
+        public void onKeepOnScreen(final Bundle extras);
+        public void onKeepOnScreen(final Bundle extras, int delay);
     }
 
     public static abstract class Activity extends android.app.Activity {
@@ -77,6 +90,16 @@ public class ComponentFramework {
                 getMenuController().setDebugMode(mDebug);
             }
 
+        }
+
+        @Override
+        protected void onStop() {
+            // propagate to layout's
+            if (getContainer() != null) {
+                getContainer().onStop();
+            }
+
+            super.onStop();
         }
 
         @Override
@@ -312,7 +335,7 @@ public class ComponentFramework {
 
     }
 
-    public static class Container extends Child implements OnPauseResumeListener, MenuController.OnMenuOpenListener {
+    public static class Container extends Child implements OnPauseResumeListener, OnStopListener, MenuController.OnMenuOpenListener {
 
         private final String LOG_TAG = "ComponentFramework.Container";
 
@@ -324,19 +347,37 @@ public class ComponentFramework {
         public Container(Context context) {
             super(context);
 
+            initApplicationState();
             initLayout();
         }
 
         public Container(Context context, AttributeSet attributeSet) {
             super(context, attributeSet);
 
+            initApplicationState();
             initLayout();
         }
 
         public Container(Context context, AttributeSet attributeSet, int defStyle) {
             super(context, attributeSet, defStyle);
 
+            initApplicationState();
             initLayout();
+        }
+
+        private void initApplicationState() {
+            if (getActivity() != null && getActivity().getIntent() != null && getActivity().getIntent().getExtras() != null) {
+                mApplicationState = getActivity().getIntent().getExtras();
+                Log_d(LOG_TAG, "initApplicationState: restore prior application state #" + mApplicationState.size());
+                dumpApplicationState();
+            }
+
+            Log_d(LOG_TAG, "initApplicationState: " + mApplicationState.getBoolean("phoneWidgetShow", false) + ", " + mApplicationState.getBoolean("phoneWidgetRestartForced", false));
+        }
+
+        public void dumpApplicationState() {
+            for (String key : mApplicationState.keySet())
+                Log_d(LOG_TAG, "key: '" + key + "' -> '" + mApplicationState.get(key) + "'");
         }
 
         private void initLayout() {
@@ -531,18 +572,26 @@ public class ComponentFramework {
                 if (getChildAt(idx) instanceof Layout) {
                     Layout layout = (Layout)getChildAt(idx);
 
-                    if (OnPauseResumeListener.class.isAssignableFrom(layout.getClass()) && layout.isShown())
+                    if (OnPauseResumeListener.class.isAssignableFrom(layout.getClass()))//) && layout.isShown())
                         ((OnPauseResumeListener)layout).onPause();
                 }
             }
+
+            // save application state to intent extras
+            Log_d(LOG_TAG, "onPause: save in intent extras");
+            getActivity().getIntent().putExtras(getApplicationState());
         }
 
         public void onResume() {
+            // copy extras from intent
+            Log_d(LOG_TAG, "onResume: load from intent extras");
+            initApplicationState();
+
             setDebugMode(getPrefBoolean("pref_dev_opts_debug", false));
 
             // propagate resume to child views
             for (int idx=0; idx<getChildCount(); idx++) {
-                if ((getChildAt(idx) instanceof Layout)  && OnPauseResumeListener.class.isAssignableFrom(getChildAt(idx).getClass()) && getChildAt(idx).isShown())
+                if ((getChildAt(idx) instanceof Layout)  && OnPauseResumeListener.class.isAssignableFrom(getChildAt(idx).getClass()))// && getChildAt(idx).isShown())
                     ((OnPauseResumeListener)getChildAt(idx)).onResume();
             }
 
@@ -558,6 +607,14 @@ public class ComponentFramework {
                         break;
                     }
                 }
+            }
+        }
+
+        public void onStop() {
+            // propagate resume to child views
+            for (int idx=0; idx<getChildCount(); idx++) {
+                if ((getChildAt(idx) instanceof Layout)  && OnStopListener.class.isAssignableFrom(getChildAt(idx).getClass()))
+                    ((OnStopListener)getChildAt(idx)).onStop();
             }
         }
 
@@ -1052,7 +1109,6 @@ public class ComponentFramework {
 
         @Override
         final public boolean dispatchTouchEvent(MotionEvent motionEvent) {
-            Log_d(LOG_TAG, "dispatchTouchEvent: ");
             return onTouchEvent(motionEvent);
         }
 

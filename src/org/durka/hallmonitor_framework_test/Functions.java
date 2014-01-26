@@ -256,10 +256,13 @@ public class Functions {
             //needed to let us wake the screen
             PowerManager pm  = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
 
-            //FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
-            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, ctx.getString(R.string.app_name));
-            wl.acquire();
-            wl.release();
+            if (!pm.isScreenOn()) {
+                Log.d(LOG_TAG, "wakeUpScreen");
+                //FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
+                PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, ctx.getString(R.string.app_name));
+                wl.acquire();
+                wl.release();
+            }
         }
 		
 		/**
@@ -273,6 +276,7 @@ public class Functions {
 			// Become device admin
 			DevicePolicyManager dpm = (DevicePolicyManager) act.getSystemService(Context.DEVICE_POLICY_SERVICE);
 			ComponentName me = new ComponentName(act, AdminReceiver.class);
+            Log_d(LOG_TAG, "start_service: component name = '" + me.toString() + "'");
 			if (!dpm.isAdminActive(me)) {
 				Intent coup = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
 				coup.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, me);
@@ -706,7 +710,7 @@ public class Functions {
 			
 			boolean isClosed = (status.compareTo("CLOSE") == 0);
 			
-			Log_d(LOG_TAG + ".cover_closed", "Cover closed state is: " + true);
+			Log_d(LOG_TAG + ".cover_closed", "Cover closed state is: " + isClosed);
 			
 			return isClosed;
 		}

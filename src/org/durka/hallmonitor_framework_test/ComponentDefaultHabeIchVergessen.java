@@ -6,14 +6,16 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Typeface;
 import android.os.BatteryManager;
+import android.service.notification.StatusBarNotification;
 import android.text.SpannableString;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
 import android.util.AttributeSet;
+import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextClock;
 
-public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout implements ComponentFramework.OnPauseResumeListener, ComponentFramework.MenuController.OnMenuActionListener {
+public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout implements ComponentFramework.OnPauseResumeListener, ComponentFramework.MenuController.OnMenuActionListener, NotificationService.OnNotificationChangedListener {
 
     private final String LOG_TAG = "ComponentDefaultHabeIchVergessen";
 
@@ -56,10 +58,18 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
 
     public void onResume() {
         Log_d(LOG_TAG, "onResume");
+
+        if (NotificationService.that != null) {
+            NotificationService.that.registerOnNotificationChangedListener(this);
+            onNotificationChanged();
+        }
     }
 
     public void onPause() {
         Log_d(LOG_TAG, "onPause");
+
+        if (NotificationService.that != null)
+            NotificationService.that.unregisterOnNotificationChangedListener(this);
     }
 
     public int getMenuId() {
@@ -71,10 +81,13 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
 
         menuController.registerMenuOption(getMenuId(), R.id.camerabutton, R.drawable.ic_notification);
         menuController.registerMenuOption(getMenuId(), R.id.torchbutton, R.drawable.ic_appwidget_torch_off);
+        menuController.registerMenuOption(getMenuId(), R.id.dumpApplicationState, R.drawable.ic_option_overlay_option1);
     }
 
     public boolean onMenuOpen(ComponentFramework.MenuController.Menu menu) {
         Log_d(LOG_TAG, "onMenuOpen: ");
+
+        // read notifications for torch state
 
         return true;
     }
@@ -95,6 +108,49 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
 
                 menuOption.setImageId((menuOption.getImageId() == R.drawable.ic_appwidget_torch_off ? R.drawable.ic_appwidget_torch_on : R.drawable.ic_appwidget_torch_off));
                 break;
+            case R.id.dumpApplicationState:
+                getContainer().dumpApplicationState();
+                break;
+        }
+    }
+
+    /**
+     * OnNotificationChanged
+     */
+    public void onNotificationChanged() {
+        Log_d(LOG_TAG, "onNotificationChanged");
+
+        if (NotificationService.that != null) {
+            Log_d(LOG_TAG, "onNotificationChanged: service is running");
+            final GridView grid = (GridView)findViewById(R.id.default_icon_container);
+
+            if (grid == null) {
+                Log_d(LOG_TAG, "onNotificationChanged: no grid found");
+                return;
+            }
+
+            if (!(grid.getAdapter() instanceof NotificationService)) {
+                StatusBarNotification[] notifs = NotificationService.that.getActiveNotifications();
+
+                final NotificationAdapter nA = new NotificationAdapter(getContext(), notifs);
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        grid.setNumColumns(nA.getCount());
+                        grid.setAdapter(nA);
+                    }
+                });
+            } else {
+                final NotificationAdapter adapter = (NotificationAdapter)grid.getAdapter();
+                adapter.update(NotificationService.that.getActiveNotifications());
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        grid.setNumColumns(adapter.getCount());
+                        adapter.notifyDataSetChanged();
+                    }
+                });
+            }
         }
     }
 

@@ -3,8 +3,12 @@ package org.durka.hallmonitor_framework_test;
 import android.content.Context;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Resources.NotFoundException;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.wifi.WifiManager;
 import android.provider.Settings;
 import android.service.notification.StatusBarNotification;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -64,8 +68,13 @@ public class NotificationAdapter extends BaseAdapter {
 				        view.setImageDrawable(that.createPackageContext(sBN.getPackageName(), 0).getResources().getDrawable(sBN.getNotification().icon));
                     }
                 }
-                if (position == getCount() - 1 && isAirPlaneMode()) {
-                    view.setImageDrawable(that.getResources().getDrawable(R.drawable.ic_phone_flight_mode));
+                if (position == getCount() - 1) {
+                    if (isAirPlaneMode())
+                        view.setImageDrawable(that.getResources().getDrawable(R.drawable.ic_phone_flight_mode));
+                    else if (isNetworkEnabled(ConnectivityManager.TYPE_WIFI))
+                        view.setImageDrawable(that.getResources().getDrawable(R.drawable.ic_phone_wifi_100));
+                    else if (isNetworkEnabled(ConnectivityManager.TYPE_MOBILE))
+                        view.setImageDrawable(that.getResources().getDrawable(R.drawable.ic_phone_mobile_data));
                 }
 			} catch (NotFoundException e) {
 				// TODO Auto-generated catch block
@@ -81,6 +90,15 @@ public class NotificationAdapter extends BaseAdapter {
 
     private boolean isAirPlaneMode() {
         return Settings.Global.getInt(that.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, 0) != 0;
+    }
+
+    private boolean isNetworkEnabled(int connectionType) {
+        ConnectivityManager connectivityManager = (ConnectivityManager)that.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if (connectivityManager == null || (connectionType != ConnectivityManager.TYPE_MOBILE && connectionType != ConnectivityManager.TYPE_WIFI))
+            return false;
+
+        return (connectivityManager.getNetworkInfo(connectionType).getState() == NetworkInfo.State.CONNECTED);
     }
 
     private void Log_d(String tag, String message) {

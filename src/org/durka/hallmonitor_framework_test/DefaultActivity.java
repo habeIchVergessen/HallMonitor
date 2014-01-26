@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.media.AudioManager;
 import android.os.BatteryManager;
@@ -34,7 +35,7 @@ import android.widget.RelativeLayout;
  * This is the activity that is displayed by default - it is displayed for the configurable delay number of milliseconds when the case is closed,
  * it is also displayed when the power button is pressed when the case is already closed
  */
-public class DefaultActivity extends Activity implements OnScreenActionListener {
+public class DefaultActivity extends Activity implements OnScreenActionListener, NotificationService.OnNotificationChangedListener {
 	
 	private final static String LOG_TAG = "DA";
 
@@ -264,6 +265,9 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
         super.onPause();
         Log_d(LOG_TAG, "onPause: " + (mPhoneWidget.isShowPhoneWidget()) + ", extras: " + (getIntent().getExtras() == null ? "null" : getIntent().getExtras().size()));
         mPhoneWidget.unregisterPhoneStateListener();
+
+        if (NotificationService.that != null)
+            NotificationService.that.unregisterOnNotificationChangedListener(this);
     }
 
 	@Override
@@ -277,6 +281,9 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
         // initPhoneWidget (overtake control if phone state is ringing or offhook)
         mPhoneWidget.initPhoneWidget();
         mPhoneWidget.registerPhoneStateListener();
+
+        if (NotificationService.that != null)
+            NotificationService.that.registerOnNotificationChangedListener(this);
 
         refreshDisplay();
 
@@ -309,13 +316,21 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
 	}
 
     @Override
-    public boolean onTouchEvent(MotionEvent motionEvent)
+    public boolean dispatchTouchEvent(MotionEvent motionEvent)
     {
-        boolean result = true;
+        boolean result = false;
 
         // event handling phoneWidget
-        if (mPhoneWidget.isShowPhoneWidget())
-            result = mPhoneWidget.onTouchEvent_PhoneWidgetHandler(motionEvent);
+        if (mPhoneWidget.isShowPhoneWidget()) {
+            Rect phoneRect = new Rect();
+            mPhoneWidget.getGlobalVisibleRect(phoneRect);
+
+            if (phoneRect.contains((int)motionEvent.getX(), (int)motionEvent.getY()))
+                result = mPhoneWidget.onTouchEvent_PhoneWidgetHandler(motionEvent);
+        }
+
+        if (!result)
+            super.dispatchTouchEvent(motionEvent);
 
         return result;
     }
@@ -484,6 +499,13 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
     public void onStartScreenOffTimer() {
         Log_d(LOG_TAG, "onStartScreenOffTimer: ");
         Functions.Actions.rearmScreenOffTimer(this);
+    }
+
+    /**
+     * OnNotificationChanged
+     */
+    public void onNotificationChanged() {
+        Functions.Actions.refresh_notifications();
     }
 
     /*

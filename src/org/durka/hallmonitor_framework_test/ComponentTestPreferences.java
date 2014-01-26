@@ -39,6 +39,8 @@ public class ComponentTestPreferences extends PreferenceActivity {
 
     @Override
     public void onActivityResult(int request, int result, Intent data) {
+        // required for service startup
+        Functions.Events.activity_result(this, request, result, data);
     }
 
     @Override

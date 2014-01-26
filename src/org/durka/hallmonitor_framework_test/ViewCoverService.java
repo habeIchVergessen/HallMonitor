@@ -28,10 +28,12 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
+import android.view.WindowManager;
 
 
 public class ViewCoverService extends Service implements SensorEventListener, TextToSpeech.OnInitListener {
@@ -61,6 +63,14 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
             } else if (action.equals(getString(R.string.ACTION_STOP_TO_SPEECH_RECEIVE))) {
                 stopTextToSpeech();
             } else if (action.equals(getString(R.string.ACTION_RESTART_DEFAULT_ACTIVITY))) {
+                Log.d(LOG_TAG, "onReceive: ACTION_RESTART_DEFAULT_ACTIVITY");
+            } else if (action.equals(getString(R.string.ACTION_RESTART_FRAMEWORK_TEST))) {
+                Log.d(LOG_TAG, "onReceive: ACTION_RESTART_FRAMEWORK_TEST");
+
+                int delay = intent.getIntExtra("restartDelay", 0);
+                intent.getExtras().remove("restartDelay");
+
+                restartFrameworkTest(intent.getExtras(), delay);
             }
         }
     };
@@ -97,6 +107,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
         filter.addAction(getString(R.string.ACTION_SEND_TO_SPEECH_RECEIVE));
         filter.addAction(getString(R.string.ACTION_STOP_TO_SPEECH_RECEIVE));
         filter.addAction(getString(R.string.ACTION_RESTART_DEFAULT_ACTIVITY));
+        filter.addAction(getString(R.string.ACTION_RESTART_FRAMEWORK_TEST));
         registerReceiver(receiver, filter);
 
         return START_STICKY;
@@ -196,6 +207,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
             ;
         }
 
+        Log.d(LOG_TAG, "sendTextToSpeech: " + text + ", " + ttsEnabled);
         boolean result = false;
 
         if (mTtsInitComplete && mTts != null && ttsEnabled) {
@@ -224,6 +236,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     }
 
     private void stopTextToSpeech() {
+        Log.d(LOG_TAG, "stopTextToSpeech: ");
         if (mTtsInitComplete && mTts != null)
             mTts.stop();
     }
@@ -238,4 +251,29 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     /**
      * Text-To-Speech (end)
      */
+
+    private void restartFrameworkTest(final Bundle extras, int delay) {
+        Log.d(LOG_TAG, "restartFrameworkTest: " + extras + ", " + delay);
+        if (delay > 0) {
+            Timer timer = new Timer();
+
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    restartFrameworkTest(extras);
+                }
+            }, delay);
+        } else
+            restartFrameworkTest(extras);
+    }
+
+    private void restartFrameworkTest(final Bundle extras) {
+        Log.d(LOG_TAG, "restartFrameworkTest: " + extras);
+        Intent start = new Intent(getBaseContext(), ComponentTestActivity.class);
+        start.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+        // restore extras from previously running task
+        if (extras != null)
+            start.putExtras(extras);
+        getApplicationContext().startActivity(start);
+    }
 }

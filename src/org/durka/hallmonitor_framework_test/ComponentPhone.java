@@ -9,27 +9,34 @@ import android.database.Cursor;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.net.Uri;
+import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-public class ComponentPhone extends ComponentFramework.Layout implements ComponentFramework.OnPreviewComponentListener {
+import java.util.Timer;
+import java.util.TimerTask;
+
+public class ComponentPhone extends ComponentFramework.Layout implements ComponentFramework.OnPreviewComponentListener, ComponentFramework.OnPauseResumeListener, ComponentFramework.MenuController.OnMenuActionListener {
 
     private final String LOG_TAG = "ComponentPhone";
     private final String mPreviewName = "phoneWidget";
 
     private boolean mInitialized = false;
 
-    public final static String INTENT_phoneWidgetShow = "phoneWidgetShow";
-    public final static String INTENT_phoneWidgetIncomingNumber = "phoneWidgetIncomingNumber";
-    public final static String INTENT_phoneWidgetInitialized = "phoneWidgetInitialized";
-    public final static String INTENT_phoneWidgetTtsNotified = "phoneWidgetTtsNotified";
+    private final static String INTENT_phoneWidgetShow = "phoneWidgetShow";
+    private final static String INTENT_phoneWidgetIncomingNumber = "phoneWidgetIncomingNumber";
+    private final static String INTENT_phoneWidgetInitialized = "phoneWidgetInitialized";
+    private final static String INTENT_phoneWidgetTtsNotified = "phoneWidgetTtsNotified";
+    private final static String INTENT_phoneWidgetRestartForced = "phoneWidgetRestartForced";
 
     private TextView mCallerName;
     private TextView mCallerNumber;
@@ -41,6 +48,8 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
     private boolean mShowPhoneWidget = false;
     private boolean mViewNeedsReset = false;
     private boolean mPreviewMode = false;
+
+    private ImplPhoneStateListener mImplPhoneStateListener = null;
 
     // drawing stuff
     private final static int mButtonMargin = 15; // designer use just 10dp; ode rendering issue
@@ -59,8 +68,13 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
             Log_d(LOG_TAG, "setup layout resource id");
             setLayoutResourceId(R.layout.component_phone_habe_ich_vergessen_layout);
         }
+
+        mImplPhoneStateListener = new ImplPhoneStateListener();
     }
 
+    /**
+     * implement abstract methods
+     */
     protected void onInitComponent() {
         mInitialized = true;
         Log_d(LOG_TAG, "onInitComponent");
@@ -78,9 +92,7 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
 
         int bgColor = getPrefInt("pref_default_bgcolor", 0xff000000);
 
-        setShowPhoneWidget(true);
-
-        if (mPreviewMode) {
+        if (!isPhoneShow() && mPreviewMode) {
             preview();
             return true;
         }
@@ -93,14 +105,15 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
     protected void onCloseComponent() {
         Log_d(LOG_TAG, "onCloseComponent");
 
-        setShowPhoneWidget(false);
-
-        if (mPreviewMode)
+        if (!isPhoneShow() && mPreviewMode)
             return;
 
         startScreenOffTimer();
     }
 
+    /**
+     * implement OnPreviewComponentListener
+     */
     public boolean onPreviewComponent() {
         String previewMode = getContainer().getPreviewMode();
 
@@ -128,7 +141,6 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
                 String value = input.getText().toString();
                 Log_d(LOG_TAG, "preview: value = '" + value + "'");
 
-                getContainer().getApplicationState().putString(INTENT_phoneWidgetIncomingNumber, value);
                 resetPhoneWidgetMakeVisible();
                 setIncomingNumber(value);
             }
@@ -152,6 +164,30 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
 
     private String getPreviewMessage() {
         return getResources().getString(R.string.pref_phone_preview_input_message);
+    }
+
+    /**
+     * implement OnPauseResumeListener
+     */
+    public void onPause() {
+        Log_d(LOG_TAG, "onPause");
+
+        TelephonyManager telephonyManager = (TelephonyManager)getContext().getSystemService(getActivity().TELEPHONY_SERVICE);
+        telephonyManager.listen(mImplPhoneStateListener, PhoneStateListener.LISTEN_NONE);
+
+        if (isPhoneShow()) {
+            Log_d(LOG_TAG, "force restart (overdrive telephone manager)");
+            forceRestart();
+        }
+    }
+
+    public void onResume() {
+        Log_d(LOG_TAG, "onResume");
+
+        TelephonyManager telephonyManager = (TelephonyManager)getContext().getSystemService(getActivity().TELEPHONY_SERVICE);
+        telephonyManager.listen(mImplPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE | PhoneStateListener.LISTEN_CALL_FORWARDING_INDICATOR);
+
+        initPhoneWidget();
     }
 
     /**
@@ -186,7 +222,7 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
         final TelephonyManager telephonyManager = (TelephonyManager)mContext.getSystemService(getActivity().TELEPHONY_SERVICE);
 
         // check phone state (if not invoked by intent)
-        if (!getContainer().getApplicationState().getBoolean(INTENT_phoneWidgetShow, false)) {
+        if (!isPhoneShow()) {
             int callState = telephonyManager.getCallState();
 
             if (callState == TelephonyManager.CALL_STATE_RINGING || callState == TelephonyManager.CALL_STATE_OFFHOOK) {
@@ -197,13 +233,13 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
                 Log_d(LOG_TAG, "initPhoneWidget: number = '" + incomingNumber + "'");
                 getContainer().getApplicationState().putBoolean(INTENT_phoneWidgetShow, true);
                 getContainer().getApplicationState().putString(INTENT_phoneWidgetIncomingNumber, incomingNumber);
-                setTtsNotified(true);
+                setVisibility(VISIBLE);
                 resetPhoneWidgetMakeVisible();
                 setIncomingNumber(incomingNumber);
 
                 if (callState == TelephonyManager.CALL_STATE_OFFHOOK) {
                     callAcceptedPhoneWidget(false);
-                    setInitialized(true);
+                    setPhoneInitialized(true);
                 }
             }
         }
@@ -219,6 +255,7 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
 
         mCallerName.setText(incomingNumber);
         result = setDisplayNameByIncomingNumber(incomingNumber);
+        getContainer().getApplicationState().putString(INTENT_phoneWidgetIncomingNumber, incomingNumber);
 
         return result;
     }
@@ -252,9 +289,9 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
 
                 Log_d(LOG_TAG, "displayName: " + name + " aka " + label + " (" + type + " -> " + typeString + ")");
 
-                if (!isTtsNotified()) {
+                if (!isPhoneTtsNotified()) {
                     sendTextToSpeech(name + (typeString != null ? " " + typeString : ""));
-                    setTtsNotified(true);
+                    setPhoneTtsNotified(true);
                 }
             }
         } finally {
@@ -296,7 +333,11 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
         mViewNeedsReset = true;
     }
 
-    private void setShowPhoneWidget(boolean show) {
+    private boolean isPhoneShow() {
+        return getContainer().getApplicationState().getBoolean(INTENT_phoneWidgetShow, false);
+    }
+
+    private void setPhoneShow(boolean show) {
         Log_d(LOG_TAG, "setShowPhoneWidget: " + show);
         mShowPhoneWidget = show;
 
@@ -305,8 +346,9 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
         } else { // clean up extra info's from intent
             getContainer().getApplicationState().remove(INTENT_phoneWidgetShow);
             getContainer().getApplicationState().remove(INTENT_phoneWidgetIncomingNumber);
-            setInitialized(false);
-            setTtsNotified(false);
+            setPhoneInitialized(false);
+            setPhoneTtsNotified(false);
+            setPhoneRestartForced(false);
         }
     }
 
@@ -371,26 +413,37 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
         mCallerNumber.setText("");
     }
 
-    private boolean isInitialized() {
+    private boolean isPhoneInitialized() {
         return getContainer().getApplicationState().getBoolean(INTENT_phoneWidgetInitialized, false);
     }
 
-    private void setInitialized(boolean initialized) {
+    private void setPhoneInitialized(boolean initialized) {
         if (initialized)
             getContainer().getApplicationState().putBoolean(INTENT_phoneWidgetInitialized, true);
         else
             getContainer().getApplicationState().remove(INTENT_phoneWidgetInitialized);
     }
 
-    private boolean isTtsNotified() {
+    private boolean isPhoneTtsNotified() {
         return getContainer().getApplicationState().getBoolean(INTENT_phoneWidgetTtsNotified, false);
     }
 
-    private void setTtsNotified(boolean ttsNotified) {
+    private void setPhoneTtsNotified(boolean ttsNotified) {
         if (ttsNotified)
             getContainer().getApplicationState().putBoolean(INTENT_phoneWidgetTtsNotified, true);
         else
             getContainer().getApplicationState().remove(INTENT_phoneWidgetTtsNotified);
+    }
+
+    private boolean isPhoneRestartForced() {
+        return getContainer().getApplicationState().getBoolean(INTENT_phoneWidgetRestartForced, false);
+    }
+
+    private void setPhoneRestartForced(boolean restartForced) {
+        if (restartForced)
+            getContainer().getApplicationState().putBoolean(INTENT_phoneWidgetRestartForced, true);
+        else
+            getContainer().getApplicationState().remove(INTENT_phoneWidgetRestartForced);
     }
 
     private void sendHangUp() {
@@ -409,6 +462,9 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
      * phone widget stuff (end)
      */
 
+    /**
+     * implement touch event handling
+     */
     @Override
     public boolean onTouchEvent(MotionEvent motionEvent) {
         float maxSwipe = 150;
@@ -571,5 +627,82 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
         }
     }
 
+    /**
+     * implement PhoneStateListener
+     */
+    private class ImplPhoneStateListener extends PhoneStateListener {
+        private final String LOG_TAG = "ImplPhoneStateListener";
 
+        @Override
+        public void onCallStateChanged(int state, String incomingNumber) {
+            switch (state) {
+                case TelephonyManager.CALL_STATE_IDLE:
+                    Log_d(LOG_TAG, "onCallStateChanged: idle");
+                    if (getVisibility() == VISIBLE) {
+                        callRejectedPhoneWidget(false);
+                        setPhoneShow(false);
+                        setVisibility(INVISIBLE);
+                    }
+                    break;
+                case TelephonyManager.CALL_STATE_OFFHOOK:
+                    Log_d(LOG_TAG, "onCallStateChanged: off hook");
+                    if (getVisibility() == VISIBLE)
+                        break;
+                case TelephonyManager.CALL_STATE_RINGING:
+                    Log_d(LOG_TAG, "onCallStateChanged: ringing");
+                    setPhoneShow(true);
+                    setVisibility(VISIBLE);
+                    resetPhoneWidgetMakeVisible();
+                    setIncomingNumber(incomingNumber);
+                    break;
+            }
+        }
+
+        @Override
+        public void onCallForwardingIndicatorChanged (boolean callForwardingIndicator) {
+            Log_d(LOG_TAG, "onCallForwardingIndicatorChanged: " + callForwardingIndicator);
+        }
+    }
+
+    /**
+     * implement OnMenuActionListener
+     */
+    public int getMenuId() {
+        return getId();
+    }
+
+    public void onMenuInit(ComponentFramework.MenuController menuController) {
+        Log_d(LOG_TAG, "onMenuInit:");
+
+        menuController.registerMenuOption(getMenuId(), R.id.dumpApplicationState, R.drawable.ic_option_overlay_option1);
+        menuController.registerMenuOption(getMenuId(), R.id.restartApplication, R.drawable.ic_option_overlay_option2);
+    }
+
+    public boolean onMenuOpen(ComponentFramework.MenuController.Menu menu) {
+        Log_d(LOG_TAG, "onMenuOpen: ");
+
+        return true;
+    }
+
+    public void onMenuAction(ComponentFramework.MenuController.MenuOption menuOption) {
+        Log_d(LOG_TAG, "onMenuAction: " + menuOption.getOptionId());
+
+        switch (menuOption.getOptionId()) {
+            case R.id.dumpApplicationState:
+                getContainer().dumpApplicationState();
+                break;
+            case R.id.restartApplication:
+                forceRestart();
+                break;
+        }
+    }
+
+    private void forceRestart() {
+        Log_d(LOG_TAG, "forceRestart: " + isPhoneRestartForced());
+        if (!isPhoneRestartForced() && ComponentFramework.OnKeepOnScreen.class.isAssignableFrom(getActivity().getClass())) {
+            setPhoneRestartForced(true);
+
+            ((ComponentFramework.OnKeepOnScreen)getActivity()).onKeepOnScreen(getContainer().getApplicationState());
+        }
+    }
 }
