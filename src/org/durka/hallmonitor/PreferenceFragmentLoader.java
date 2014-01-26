@@ -52,11 +52,11 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        Log.d(LOG_TAG, "PFL-oC");
+        Log_d(LOG_TAG, "PFL-oC");
 
         try {
             final String resourceName = getArguments().getString("resource", "");
-            Log.d(LOG_TAG, "loading preferences from " + resourceName + ".xml");
+            Log_d(LOG_TAG, "loading preferences from " + resourceName + ".xml");
 
             Context context = getActivity().getApplicationContext();
 
@@ -120,14 +120,14 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
         	Activity act = getActivity();
         	PackageInfo info = act.getPackageManager().getPackageInfo(act.getPackageName(), 0);
         	
-        	Log.d(LOG_TAG, "versionCode = " + info.versionCode);
+        	Log_d(LOG_TAG, "versionCode = " + info.versionCode);
         	
         	if (prefs.getInt("version", 3) < info.versionCode) {
             	prefs.edit()
             		.putInt("version", info.versionCode)
             		.commit();
             	
-            	Log.d(LOG_TAG, "stored version code");
+            	Log_d(LOG_TAG, "stored version code");
             	
             	new AlertDialog.Builder(act)
             		.setMessage(String.format(getResources().getString(R.string.firstrun_message), info.versionName))
@@ -180,17 +180,17 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
 
         // update display
         if (findPreference(key) instanceof CheckBoxPreference) {
-        	Log.d(LOG_TAG + "-oSPC", "toggling check box");
+        	Log_d(LOG_TAG + "-oSPC", "toggling check box");
             ((CheckBoxPreference)findPreference(key)).setChecked(prefs.getBoolean(key, false));
         } else if (findPreference(key) instanceof PreferenceSwitchable) {
-        	Log.d(LOG_TAG + "-oSPC", "toggling switch");
+        	Log_d(LOG_TAG + "-oSPC", "toggling switch");
         	((PreferenceSwitchable)findPreference(key)).setChecked(prefs.getBoolean(key, false));
         }
 
         // if the service is being enabled/disabled the key will be pref_enabled
         if (key.equals("pref_enabled")) {
         	
-        	Log.d(LOG_TAG, "pref_enabled is now " + prefs.getBoolean(key, false));
+        	Log_d(LOG_TAG, "pref_enabled is now " + prefs.getBoolean(key, false));
 
             if (prefs.getBoolean(key, false)) {
                 Functions.Actions.start_service(getActivity());
@@ -224,9 +224,6 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
                     // if "whoami" doesn't work, refuse to set preference
                     Toast.makeText(getActivity(), "Root access not granted - cannot enable root features!", Toast.LENGTH_SHORT).show();
                     prefs.edit().putBoolean(key, false).commit();
-
-                    // check
-                    setCheckedPreferenceSwitchable(key, false);
                 }
             }
 
@@ -271,12 +268,6 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
             phoneControl.setEnabled(phoneControlState);
         if (phoneControlConfig != (phoneControlState && prefs.getBoolean("pref_phone_controls_user", false)))
             prefs.edit().putBoolean("pref_phone_controls", !phoneControlConfig).commit();
-    }
-
-    private void setCheckedPreferenceSwitchable(String key, boolean checked) {
-        Preference preference = findPreference(key);
-        if (preference != null && PreferenceSwitchable.class.isAssignableFrom(preference.getClass()))
-            ((PreferenceSwitchable)preference).setChecked(checked);
     }
 
     private void Log_d(String tag, String message) {

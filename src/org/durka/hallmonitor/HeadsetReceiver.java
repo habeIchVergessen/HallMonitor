@@ -23,7 +23,7 @@ public class HeadsetReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context ctx, Intent intent) {
     	int state = intent.getExtras().getInt("state");
-    	Log.d("HR", "headset is " + (state == 0 ? "gone" : "here") + "!");
+//    	Log.d("HR", "headset is " + (state == 0 ? "gone" : "here") + "!");
     	Functions.Events.headset(ctx, state);
     }
 }

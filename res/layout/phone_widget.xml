@@ -5,7 +5,7 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:layout_gravity="center_horizontal"
     android:columnCount="6"
-    android:rowCount="6"
+    android:rowCount="7"
     android:columnOrderPreserved="true"
     android:background="#FF000000">
 
@@ -44,7 +44,8 @@
         android:layout_columnSpan="6"
         android:layout_row="4"
         android:layout_rowSpan="2"
-        android:layout_gravity="center_horizontal">
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="2dp">
 
         <ImageView
             android:id="@+id/call_accept_slide"

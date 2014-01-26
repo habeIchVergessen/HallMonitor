@@ -226,7 +226,7 @@ public class Functions {
                 //handler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    Log.d("F.Act.close_cover", "Locking screen now.");
+                    Log_d(LOG_TAG + ".close_cover", "Locking screen now.");
                     dpm.lockNow();
                     //FIXME Would it be better to turn the screen off rather than actually locking
                     //presumably then it will auto lock as per phone configuration
@@ -234,7 +234,7 @@ public class Functions {
                 }
             }, delay);
 
-            Log.d("F.Act.set_lock_timer", "Delay set to: " + delay);
+            Log_d(LOG_TAG + ".set_lock_timer", "Delay set to: " + delay);
         }
 
 
@@ -271,10 +271,12 @@ public class Functions {
             //needed to let us wake the screen
             PowerManager pm  = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
 
-            //FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
-            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, ctx.getString(R.string.app_name));
-            wl.acquire();
-            wl.release();
+            if (!pm.isScreenOn()) {
+                //FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
+                PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, ctx.getString(R.string.app_name));
+                wl.acquire();
+                wl.release();
+            }
         }
 		
 		/**
@@ -338,7 +340,7 @@ public class Functions {
 			Log_d(LOG_TAG + ".register_widget", "Register widget called for type: " + widgetType);
 			//hand off to the HM App Widget Manager for processing
 			if (widget_settings_ongoing) {
-				Log.d("F.Act.register_widget", "skipping, already inflight");
+				Log_d("F.Act.register_widget", "skipping, already inflight");
 			} else {
 				hmAppWidgetManager.register_widget(act, widgetType);
 			}
@@ -440,7 +442,7 @@ public class Functions {
 	        Is.torchIsOn = !Is.torchIsOn;
 	        if (Is.torchIsOn) {
 	        	da.torchButton.setImageResource(R.drawable.ic_appwidget_torch_on);
-	        	if (timerTask != null) timerTask.cancel();
+	        	stopScreenOffTimer();
 	        } else {
 	        	da.torchButton.setImageResource(R.drawable.ic_appwidget_torch_off);
 	        	close_cover(da);
@@ -615,7 +617,7 @@ public class Functions {
 				
 			
 			case NOTIFICATION_LISTENER_ON:
-				Log.d("F-oAR", "return from checking the box");
+				Log_d("F-oAR", "return from checking the box");
 				notification_settings_ongoing = false;
 				if (!Functions.Is.service_running(ctx, NotificationService.class)) {
                 	Toast.makeText(ctx, ctx.getString(R.string.notif_left_unchecked), Toast.LENGTH_SHORT).show();
@@ -626,7 +628,7 @@ public class Functions {
                 }
 				break;
 			case NOTIFICATION_LISTENER_OFF:
-				Log.d("F-oAR", "return from unchecking the box");
+				Log_d("F-oAR", "return from unchecking the box");
 				notification_settings_ongoing = false;
 				if (Functions.Is.service_running(ctx, NotificationService.class)) {
                 	Toast.makeText(ctx, ctx.getString(R.string.notif_left_checked), Toast.LENGTH_SHORT).show();
@@ -880,7 +882,7 @@ public class Functions {
 
 		public static void rise_and_shine(Context ctx) {
 			//FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
-			Log.d("F.Util.rs", "aww why can't I hit snooze");
+			Log_d("F.Util.rs", "aww why can't I hit snooze");
 			PowerManager pm  = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
 			PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, ctx.getString(R.string.app_name));
 	        wl.acquire();

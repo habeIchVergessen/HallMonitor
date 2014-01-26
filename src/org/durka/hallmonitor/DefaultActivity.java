@@ -277,7 +277,7 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
         // load debug setting
         mDebug = PreferenceManager.getDefaultSharedPreferences(getBaseContext()).getBoolean("pref_dev_opts_debug", false);
 
-        Log.d(LOG_TAG, "onResume: " + (mPhoneWidget.isShowPhoneWidget()) + ", debug = " + mDebug);
+        Log_d(LOG_TAG, "onResume: " + (mPhoneWidget.isShowPhoneWidget()) + ", debug = " + mDebug);
         // initPhoneWidget (overtake control if phone state is ringing or offhook)
         mPhoneWidget.initPhoneWidget();
         mPhoneWidget.registerPhoneStateListener();
@@ -452,7 +452,7 @@ public class DefaultActivity extends Activity implements OnScreenActionListener 
     }
 
     public void camera_capture(View view) {
-        Log.d("hm-cam", "say cheese");
+        Log_d("hm-cam", "say cheese");
         ((CameraPreview)findViewById(R.id.default_camera)).capture();
     }
 

@@ -145,16 +145,16 @@ public class PhoneWidget extends RelativeLayout {
         if (mPhoneWidget == null)
             setupLayout();
 
-        if (isInitialized())
-            return;
-
-        wakeUpScreen();
-        stopScreenOffTimer();
+        if (!isInitialized()) {
+            wakeUpScreen();
+            stopScreenOffTimer();
+        }
 
         refreshDisplay();
     }
 
     public boolean isShowPhoneWidget() {
+        Log_d(LOG_TAG, "isShowPhoneWidget: " + mShowPhoneWidget);
         return mShowPhoneWidget;
     }
 
@@ -187,9 +187,12 @@ public class PhoneWidget extends RelativeLayout {
             setIncomingNumber(getIntent().getStringExtra(PhoneWidget.INTENT_phoneWidgetIncomingNumber));
             setInitialized(true);
 
-            // show phone widget
-            setVisibility(View.VISIBLE);
             setShowPhoneWidget(true);
+        }
+
+        if (!isShown()) {
+            // show phone widget
+            setVisibility(VISIBLE);
 
             ViewParent parent = getParent();
             parent.bringChildToFront(this);
@@ -332,7 +335,7 @@ public class PhoneWidget extends RelativeLayout {
                 //telephonyManager.notify();
 
                 Log_d(LOG_TAG, "initPhoneWidget: number = '" + incomingNumber + "'");
-                getIntent().putExtra(INTENT_phoneWidgetShow, true);
+                setShowPhoneWidget(true);
                 getIntent().putExtra(INTENT_phoneWidgetIncomingNumber, incomingNumber);
                 setTtsNotified(true);
                 resetPhoneWidgetMakeVisible();

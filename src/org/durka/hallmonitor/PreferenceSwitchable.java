@@ -111,8 +111,7 @@ public class PreferenceSwitchable extends Preference {
     protected void setChecked(boolean checked) { setChecked(checked, true); }
     protected void setChecked(boolean checked, boolean notify) {
         //Log.d(LOG_TAG, getTitle() + " setChecked: " + checked);
-        //new Exception().printStackTrace();
-        
+
     	mSwitchState = checked;
         setSelectable(mSwitchState);
         
@@ -128,7 +127,7 @@ public class PreferenceSwitchable extends Preference {
     
     @Override
     public void onDependencyChanged(Preference dependency, boolean disableDependent) {
-    	Log.d(LOG_TAG, getTitle() + " oDP from " + dependency.getTitle() + ", dD=" + disableDependent);
+    	//Log.d(LOG_TAG, getTitle() + " oDP from " + dependency.getTitle() + ", dD=" + disableDependent);
     	
     	setEnabled(!disableDependent);
     }
