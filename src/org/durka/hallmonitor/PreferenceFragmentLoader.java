@@ -62,7 +62,7 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
 
             // debug
             mDebug = getPreferenceManager().getSharedPreferences().getBoolean("pref_dev_opts_debug", mDebug);
-            if (mDebug)
+            if (mDebug && findPreference("pref_about") != null)
                 Toast.makeText(getActivity(), "debug is enabled!", Toast.LENGTH_LONG).show();
 
             final int resourceId = context.getResources().getIdentifier(resourceName, "xml", context.getPackageName());
