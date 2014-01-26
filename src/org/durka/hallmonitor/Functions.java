@@ -48,10 +48,14 @@ import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.provider.ContactsContract;
 import android.service.notification.StatusBarNotification;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.BaseAdapter;
 import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -77,6 +81,9 @@ public class Functions {
 	
 	public static DefaultActivity defaultActivity;
 	public static Configuration configurationActivity;
+	
+	private static boolean notification_settings_ongoing = false;
+	public static boolean widget_settings_ongoing = false;
 	
 	/**
 	 * Provides methods for performing actions. (e.g. what to do when the cover is opened and closed etc.)
@@ -251,7 +258,8 @@ public class Functions {
 
 			// step 2: wake the screen
             wakeUpScreen(ctx);
-
+// durka:			Util.rise_and_shine(ctx);
+			
 			//save the cover state
 			Events.set_cover(false);
 
@@ -308,10 +316,12 @@ public class Functions {
 		
 		public static void do_notifications(Activity act, boolean enable) {
 			
-			if (enable && !Is.service_running(act, NotificationService.class)) {
+			if (enable && !notification_settings_ongoing && !Is.service_running(act, NotificationService.class)) {
+				notification_settings_ongoing = true;
 				Toast.makeText(act, act.getString(R.string.notif_please_check), Toast.LENGTH_SHORT).show();
 				act.startActivityForResult(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"), NOTIFICATION_LISTENER_ON);
-			} else if (!enable && Is.service_running(act, NotificationService.class)) {
+			} else if (!enable && !notification_settings_ongoing && Is.service_running(act, NotificationService.class)) {
+				notification_settings_ongoing = true;
 				Toast.makeText(act, act.getString(R.string.notif_please_uncheck), Toast.LENGTH_SHORT).show();
 				act.startActivityForResult(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"), NOTIFICATION_LISTENER_OFF);
 			}
@@ -327,7 +337,11 @@ public class Functions {
 			
 			Log_d(LOG_TAG + ".register_widget", "Register widget called for type: " + widgetType);
 			//hand off to the HM App Widget Manager for processing
-			hmAppWidgetManager.register_widget(act, widgetType);
+			if (widget_settings_ongoing) {
+				Log.d("F.Act.register_widget", "skipping, already inflight");
+			} else {
+				hmAppWidgetManager.register_widget(act, widgetType);
+			}
 		}
 		
 		/**
@@ -426,7 +440,7 @@ public class Functions {
 	        Is.torchIsOn = !Is.torchIsOn;
 	        if (Is.torchIsOn) {
 	        	da.torchButton.setImageResource(R.drawable.ic_appwidget_torch_on);
-	        	stopScreenOffTimer();
+	        	if (timerTask != null) timerTask.cancel();
 	        } else {
 	        	da.torchButton.setImageResource(R.drawable.ic_appwidget_torch_off);
 	        	close_cover(da);
@@ -560,6 +574,7 @@ public class Functions {
 				//call back for appwidget pick	
 			case REQUEST_PICK_APPWIDGET:
 				//widget picked
+				widget_settings_ongoing = false;
 				if (result == Activity.RESULT_OK) {
 					//widget chosen so launch configurator
 					hmAppWidgetManager.configureWidget(data, ctx);
@@ -577,6 +592,7 @@ public class Functions {
 				break;		
 			//call back for appwidget configure
 			case REQUEST_CONFIGURE_APPWIDGET:
+				widget_settings_ongoing = false;
 				//widget configured
 				if (result == Activity.RESULT_OK) {
 					//widget configured successfully so create it
@@ -600,6 +616,7 @@ public class Functions {
 			
 			case NOTIFICATION_LISTENER_ON:
 				Log.d("F-oAR", "return from checking the box");
+				notification_settings_ongoing = false;
 				if (!Functions.Is.service_running(ctx, NotificationService.class)) {
                 	Toast.makeText(ctx, ctx.getString(R.string.notif_left_unchecked), Toast.LENGTH_SHORT).show();
                 	PreferenceManager.getDefaultSharedPreferences(ctx)
@@ -610,6 +627,7 @@ public class Functions {
 				break;
 			case NOTIFICATION_LISTENER_OFF:
 				Log.d("F-oAR", "return from unchecking the box");
+				notification_settings_ongoing = false;
 				if (Functions.Is.service_running(ctx, NotificationService.class)) {
                 	Toast.makeText(ctx, ctx.getString(R.string.notif_left_checked), Toast.LENGTH_SHORT).show();
                 	PreferenceManager.getDefaultSharedPreferences(ctx)
@@ -729,6 +747,8 @@ public class Functions {
 						
 						// start
 						ctx.startActivity(intent);
+
+// durka:						Util.rise_and_shine(ctx); // make sure the screen is on
 					}
 				}, 500);
 			}
@@ -827,7 +847,6 @@ public class Functions {
         }
 	}
 
-    /*
 	public static class Util {
 		// from http://stackoverflow.com/questions/3712112/search-contact-by-phone-number
 		public static String getContactName(Context ctx, String number) {
@@ -859,10 +878,18 @@ public class Functions {
 		    return name;
 		}
 
+		public static void rise_and_shine(Context ctx) {
+			//FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
+			Log.d("F.Util.rs", "aww why can't I hit snooze");
+			PowerManager pm  = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
+			PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, ctx.getString(R.string.app_name));
+	        wl.acquire();
+	        wl.release();
+		}
+
         private static void Log_d(String tag, String msg) {
             if (DefaultActivity.isDebug())
                 Log.d(tag, msg);
         }
 	}
-    */
 }
