@@ -26,7 +26,7 @@ public class HMAppWidgetManager {
 	
 	//track which widget we are currently dealing with - holds state across the events firing
 	//this is a bit clunky, but there's no need to worry about thread safety so should be fine
-	private String currentWidgetType;
+	public String currentWidgetType;
 	
 	//app widget management classes we need
 	public AppWidgetManager mAppWidgetManager;
@@ -71,10 +71,11 @@ public class HMAppWidgetManager {
 	    currentWidgetType = widgetType;
 	    
 	    //kick off the widget picker, the call back will be picked up in Functions.Events
+	    Functions.widget_settings_ongoing = true;
 	    act.startActivityForResult(pickIntent, Functions.REQUEST_PICK_APPWIDGET);
 		
 	}
-   
+    
 	/**
 	 * Launch into configuration dialog if required
 	 * @param data Intent payload, needed for getting app widget id
@@ -99,6 +100,7 @@ public class HMAppWidgetManager {
 	        Intent intent = new Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE);
 	        intent.setComponent(appWidgetInfo.configure);
 	        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
+	        Functions.widget_settings_ongoing = true;
 	        ((Activity)ctx).startActivityForResult(intent, Functions.REQUEST_CONFIGURE_APPWIDGET);
 	    } else {
 	    	

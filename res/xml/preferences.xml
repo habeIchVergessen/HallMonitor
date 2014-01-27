@@ -18,115 +18,66 @@
 
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
                   xmlns:robobunny="http://robobunny.com" >
-
-    <CheckBoxPreference
+    
+    <org.durka.hallmonitor.PreferenceSwitchable
         android:key="pref_enabled"
         android:title="@string/pref_enabled"
         android:summary="@string/pref_enabled_summary"
-        android:defaultValue="false" />
+        android:fragment="org.durka.hallmonitor.PreferenceFragmentLoader"
+        android:defaultValue="false">
+        <extra
+            android:name="resource"
+            android:value="preferences_general" />
+        <extra
+            android:name="title"
+            android:value="@string/pref_enabled_title" />
+    </org.durka.hallmonitor.PreferenceSwitchable>
     
-    <com.hlidskialf.android.preference.SeekBarPreference
-        android:key="pref_delay"
-        android:title="@string/pref_delay"
-	    android:summary="@string/pref_delay_summary"
-	    android:dependency="pref_enabled"
-	    android:dialogMessage="@string/pref_delay_summary"
-        android:defaultValue="10000"
-        android:max="30000"/>
-    
-    <CheckBoxPreference
-        android:key="pref_dim"
-        android:title="@string/pref_dim"
-        android:summary="@string/pref_dim_summary"
-        android:dependency="pref_delay"
-        android:defaultValue="true" />
-    
-    <CheckBoxPreference
+    <org.durka.hallmonitor.PreferenceSwitchable
         android:key="pref_runasroot"
         android:title="@string/pref_runasroot"
         android:summary="@string/pref_runasroot_summary"
-        android:defaultValue="false" />
-    
-    <CheckBoxPreference
-        android:key="pref_default_widget"
-        android:title="@string/pref_default_widget"
-        android:summary="@string/pref_default_widget_summary"
         android:defaultValue="false"
-        android:disableDependentsState="true" />
+        android:dependency="pref_enabled" />
     
-    <afzkl.development.colorpickerview.preference.ColorPickerPreference
-        android:key="pref_default_bgcolor"
-        android:title="@string/pref_default_bgcolor"
-        android:summary="@string/pref_default_bgcolor_summary"
-        android:defaultValue="0xFFA5C8F2"
-        android:dependency="pref_default_widget" />
-    <afzkl.development.colorpickerview.preference.ColorPickerPreference
-        android:key="pref_default_fgcolor"
-        android:title="@string/pref_default_fgcolor"
-        android:summary="@string/pref_default_fgcolor_summary"
-        android:defaultValue="0xFF33B5E5"
-        android:dependency="pref_default_widget" />
-    
-    <CheckBoxPreference
-        android:key="pref_do_notifications"
-        android:title="When closed: notifications"
-        android:summary="TODO"
-        android:defaultValue="false" />
-    
-    <CheckBoxPreference
-        android:key="pref_flash_controls"
-        android:title="@string/pref_flash_controls"
-        android:summary="@string/pref_flash_controls_summary"
-        android:defaultValue="false" />
-    
-    <CheckBoxPreference
-        android:key="pref_media_widget"
-        android:title="@string/pref_media_widget"
-        android:summary="@string/pref_media_widget_summary"
-        android:defaultValue="false" />
-    
-    <CheckBoxPreference
-        android:key="pref_alarm_controls"
-        android:title="@string/pref_alarm_controls"
-        android:summary="@string/pref_alarm_controls_summary"
-        android:defaultValue="false" />
-
     <PreferenceScreen
-        android:key="pref_phone_screen"
-        android:title="@string/pref_phone_screen"
-        android:summary="@string/pref_phone_screen_summary"
-        android:enabled="false">
-        <SwitchPreference
-            android:key="pref_phone_controls"
-            android:title="@string/pref_phone_controls"
-            android:text="@string/pref_phone_controls"
-            android:defaultValue="false" />
-        <CheckBoxPreference
-            android:key="pref_phone_controls_tts"
-            android:title="@string/pref_phone_controls_tts"
-            android:summary="@string/pref_phone_controls_tts_summary"
-            android:defaultValue="false" />
-        <ListPreference
-            android:key="pref_phone_controls_tts_delay"
-            android:title="@string/pref_phone_controls_tts_delay"
-            android:summary="@string/pref_phone_controls_tts_delay_summary"
-            android:entries="@array/ttsDelayNames"
-            android:entryValues="@array/ttsDelayValues"
-            android:defaultValue="500"
-            android:selectable="true"/>
-        <CheckBoxPreference
-            android:key="pref_phone_controls_speaker"
-            android:title="@string/pref_phone_controls_speaker"
-            android:summary="@string/pref_phone_controls_speaker_summary"
-            android:defaultValue="false" />
+        android:title="@string/pref_widgets"
+        android:summary="@string/pref_widgets_summary"
+        android:dependency="pref_enabled"
+        android:fragment="org.durka.hallmonitor.PreferenceFragmentLoader">
+        
+        <extra
+	        android:name="resource"
+	        android:value="preferences_widgets" />
+	    <extra
+	        android:name="title"
+	        android:value="@string/pref_optional" />
+    
     </PreferenceScreen>
+    
+    <PreferenceScreen
+        android:title="@string/pref_optional"
+        android:summary="@string/pref_optional_summary"
+        android:dependency="pref_enabled"
+        android:fragment="org.durka.hallmonitor.PreferenceFragmentLoader">
+	    
+	    <extra
+	        android:name="resource"
+	        android:value="preferences_features" />
+	    <extra
+	        android:name="title"
+	        android:value="@string/pref_optional" />
+	    
+	</PreferenceScreen>
 
+    <!-- spacer -->
     <Preference
         android:title=""
         android:summary=""
         android:enabled="false" />
     
     <Preference
+        android:key="pref_about"
         android:title="@string/pref_about"
         android:summary="@string/pref_about_summary"
         android:enabled="false" />

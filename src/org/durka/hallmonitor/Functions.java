@@ -36,17 +36,25 @@ import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.Resources.NotFoundException;
 import android.os.Build;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Handler;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.provider.ContactsContract;
 import android.service.notification.StatusBarNotification;
+import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.BaseAdapter;
 import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -55,13 +63,12 @@ import android.widget.Toast;
  */
 public class Functions {
 	
+	// callback identifiers for startActivityForResult, used by the preference screen
 	public static final int DEVICE_ADMIN_WAITING = 42;
-	
-	//needed for the call backs from the widget picker
-	//pick is the call back after picking a widget, configure is the call back after
-	//widget configuration
 	public static final int REQUEST_PICK_APPWIDGET = 9;
 	public static final int REQUEST_CONFIGURE_APPWIDGET = 5;
+	public static final int NOTIFICATION_LISTENER_ON = 0xDEAD;
+	public static final int NOTIFICATION_LISTENER_OFF = 0xBEEF;
 	
     //this action will let us toggle the flashlight
     public static final String TOGGLE_FLASHLIGHT = "net.cactii.flash2.TOGGLE_FLASHLIGHT";
@@ -74,14 +81,17 @@ public class Functions {
 	public static DefaultActivity defaultActivity;
 	public static Configuration configurationActivity;
 	
+	private static boolean notification_settings_ongoing = false;
+	public static boolean widget_settings_ongoing = false;
+	
 	/**
 	 * Provides methods for performing actions. (e.g. what to do when the cover is opened and closed etc.)
 	 */
 	public static class Actions {
 		
-		// used for the timer to turn off the screen on a delay
-        private static Timer timer = new Timer();
-        private static TimerTask timerTaskScreenOff;
+		//used for the timer to turn off the screen on a delay
+        public static Timer timer = new Timer();
+        public static TimerTask timerTask;
 		
         
         /**
@@ -121,69 +131,50 @@ public class Functions {
 
 				 Log.d("F.Act.close_cover", "...Sensitivity boosted, hold onto your hats!");
 			 }
-
-			 rearmScreenOffTimer(ctx);
-		}
-
-		/**
-		 * ScreenOnTimer
-		 */
-		public static void rearmScreenOffTimer(Context ctx)
-		{
-			boolean coverClosed = Is.cover_closed(ctx);
 			
-			// don't let run more than 1 timer
-			stopScreenOffTimer("called from rearmScreenOffTimer");
-			
-			Log.d("F.Act.rearmScreenOffTimer", "cover_closed = " + coverClosed);
-			
-			if (!coverClosed)
-				return;
-
-            //need this to let us lock the phone
+			//need this to let us lock the phone
 			final DevicePolicyManager dpm = (DevicePolicyManager) ctx.getSystemService(Context.DEVICE_POLICY_SERVICE);
 			//final PowerManager pm = (PowerManager)ctx.getSystemService(Context.POWER_SERVICE);
 			
 			ComponentName me = new ComponentName(ctx, AdminReceiver.class);
 			if (!dpm.isAdminActive(me)) {
 				// if we're not an admin, we can't do anything
-				Log.d("F.Act.rearmScreenOffTimer", "We are not an admin so cannot do anything.");
+				Log.d("F.Act.close_cover", "We are not an admin so cannot do anything.");
 				return;
 			}
 			
-			
-			
             //step 2: wait for the delay period and turn the screen off
-            int delay = PreferenceManager.getDefaultSharedPreferences(ctx).getInt("pref_delay", 10000);
-            
-            Log.d("F.Act.rearmScreenOffTimer", "Delay set to: " + delay);
-            
-            
-            //using the handler is causing a problem, seems to lock up the app, hence replaced with a Timer
-            timer.schedule(timerTaskScreenOff = new TimerTask() {
+            setLockTimer(ctx);
+          
+		}
+
+		
+		public static void setLockTimer(Context ctx) {
+			setLockTimer(ctx, PreferenceManager.getDefaultSharedPreferences(ctx).getInt("pref_delay", 10000));
+		}
+		
+		public static void setLockTimer(Context ctx, int delay) {
+			timer.cancel();
+			
+			timer = new Timer();
+			
+			//need this to let us lock the phone
+			final DevicePolicyManager dpm = (DevicePolicyManager) ctx.getSystemService(Context.DEVICE_POLICY_SERVICE);
+			
+			//using the handler is causing a problem, seems to lock up the app, hence replaced with a Timer
+            timer.schedule(timerTask = new TimerTask() {
 			//handler.postDelayed(new Runnable() {
 				@Override
 				public void run() {	
-					Log.d("F.Act.rearmScreenOffTimer", "Locking screen now.");
+					Log.d("F.Act.close_cover", "Locking screen now.");
 					dpm.lockNow();
 					//FIXME Would it be better to turn the screen off rather than actually locking
 					//presumably then it will auto lock as per phone configuration
 					//I can't work out how to do it though!
 				}
 			}, delay);
-		}
-		
-		public static void stopScreenOffTimer() {
-			stopScreenOffTimer(null);
-		}
-		
-		public static void stopScreenOffTimer(String info)
-		{
-			Log.d("F.Act.stopScreenOffTimer", "active: " + (timerTaskScreenOff != null) + (info != null ? " (" + info + ")" : ""));
-			if (timerTaskScreenOff != null) {
-				timerTaskScreenOff.cancel();
-				timerTaskScreenOff = null;
-			}
+            
+            Log.d("F.Act.set_lock_timer", "Delay set to: " + delay);
 		}
 		
 		/**
@@ -192,6 +183,7 @@ public class Functions {
          * Wakes the screen up.
          * @param ctx Application context.
 		 */
+		@SuppressWarnings("deprecation")
 		public static void open_cover(Context ctx) {
 			
 			Log.d("F.Act.open_cover", "Open cover event receieved.");
@@ -200,13 +192,13 @@ public class Functions {
 			if (configurationActivity != null) configurationActivity.moveTaskToBack(true);
 	        //we also don't want to see the default activity
 	        if (defaultActivity != null)  defaultActivity.moveTaskToBack(true);
-	        
+			
 			// step 1: if we were going to turn the screen off, cancel that
-			stopScreenOffTimer();
-
+			if (timerTask != null) timerTask.cancel();
+			
 			// step 2: wake the screen
-            wakeUpScreen(ctx);
-
+			Util.rise_and_shine(ctx);
+			
 			//save the cover state
 			Events.set_cover(false);
 			
@@ -219,16 +211,6 @@ public class Functions {
 			 }
 		}
 
-        @SuppressWarnings("deprecation")
-        public static void wakeUpScreen(Context ctx) {
-            //needed to let us wake the screen
-            PowerManager pm  = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
-
-            //FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
-            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, ctx.getString(R.string.app_name));
-            wl.acquire();
-            wl.release();
-        }
 		
 		/**
 		 * Starts the HallMonitor service. Service state is dependent on admin permissions.
@@ -242,6 +224,7 @@ public class Functions {
 			DevicePolicyManager dpm = (DevicePolicyManager) act.getSystemService(Context.DEVICE_POLICY_SERVICE);
 			ComponentName me = new ComponentName(act, AdminReceiver.class);
 			if (!dpm.isAdminActive(me)) {
+				Log.d("F.Act.start_service", "launching dpm overlay");
 				Intent coup = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
 				coup.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, me);
 				coup.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, act.getString(R.string.admin_excuse));
@@ -266,6 +249,19 @@ public class Functions {
 			if (dpm.isAdminActive(me)) dpm.removeActiveAdmin(me);
 		}
 		
+		public static void do_notifications(Activity act, boolean enable) {
+			
+			if (enable && !notification_settings_ongoing && !Is.service_running(act, NotificationService.class)) {
+				notification_settings_ongoing = true;
+				Toast.makeText(act, act.getString(R.string.notif_please_check), Toast.LENGTH_SHORT).show();
+				act.startActivityForResult(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"), NOTIFICATION_LISTENER_ON);
+			} else if (!enable && !notification_settings_ongoing && Is.service_running(act, NotificationService.class)) {
+				notification_settings_ongoing = true;
+				Toast.makeText(act, act.getString(R.string.notif_please_uncheck), Toast.LENGTH_SHORT).show();
+				act.startActivityForResult(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"), NOTIFICATION_LISTENER_OFF);
+			}
+			
+		}
 		
 		/**
 		 * Hand off to the HMAppWidgetManager to deal with registering new app widget.
@@ -276,7 +272,11 @@ public class Functions {
 			
 			Log.d("F.Act.register_widget", "Register widget called for type: " + widgetType);
 			//hand off to the HM App Widget Manager for processing
-			hmAppWidgetManager.register_widget(act, widgetType);
+			if (widget_settings_ongoing) {
+				Log.d("F.Act.register_widget", "skipping, already inflight");
+			} else {
+				hmAppWidgetManager.register_widget(act, widgetType);
+			}
 		}
 		
 		/**
@@ -299,8 +299,6 @@ public class Functions {
 		public static String run_commands_as_root(String[] cmds) { return run_commands_as_root(cmds, true); }
 		
 		public static String run_commands_as_root(String[] cmds, boolean want_output) {
-            String result = "";
-
 	        try {
 	        	Process p = Runtime.getRuntime().exec("su");
 	        	
@@ -341,14 +339,15 @@ public class Functions {
 		              error += currentLine + "\n";
 		            }	           
 		            Log.d("F.Act.run_comm_as_root", "Have error: " + error);
+		            
+		            return output.trim();
+	            }
+	            return "";
 
-                    result = output.trim();
-                }
 	        } catch (IOException ioe) {
 	        	Log.e("F.Act.run_comm_as_root","Failed to run command!", ioe);
+	        	return "";
 	        }
-
-            return result;
 		}
 
 
@@ -375,38 +374,54 @@ public class Functions {
 	        Is.torchIsOn = !Is.torchIsOn;
 	        if (Is.torchIsOn) {
 	        	da.torchButton.setImageResource(R.drawable.ic_appwidget_torch_on);
-	        	stopScreenOffTimer();
+	        	if (timerTask != null) timerTask.cancel();
 	        } else {
 	        	da.torchButton.setImageResource(R.drawable.ic_appwidget_torch_off);
 	        	close_cover(da);
 	        }
 		}
 		
+		public static void start_camera(DefaultActivity da) {
+			if (timerTask != null) timerTask.cancel();
+			DefaultActivity.camera_up = true;
+			da.refreshDisplay();
+			da.findViewById(R.id.default_camera).setVisibility(View.VISIBLE);
+		}
+		
+		public static void end_camera(DefaultActivity da) { end_camera(da, true); }
+		
+		public static void end_camera(DefaultActivity da, boolean should_close) {
+			da.findViewById(R.id.default_camera).setVisibility(View.INVISIBLE);
+			DefaultActivity.camera_up = false;
+			da.refreshDisplay();
+			if (should_close) close_cover(da);
+		}
+		
 		public static void setup_notifications() {
 			StatusBarNotification[] notifs = NotificationService.that.getActiveNotifications();
 			Log.d("DA-oC", Integer.toString(notifs.length) + " notifications");
 			GridView grid = (GridView)defaultActivity.findViewById(R.id.default_icon_container);
-
-            final NotificationAdapter nA = new NotificationAdapter(defaultActivity, notifs);
-            grid.setNumColumns(nA.getCount());
-            grid.setAdapter(nA);
+			grid.setNumColumns(notifs.length);
+			grid.setAdapter(new NotificationAdapter(defaultActivity, notifs));
 		}
 		
 		public static void refresh_notifications() {
 			final GridView grid = (GridView)defaultActivity.findViewById(R.id.default_icon_container);
 			final NotificationAdapter adapter = (NotificationAdapter)grid.getAdapter();
-			adapter.update(NotificationService.that.getActiveNotifications());
+			final StatusBarNotification[] notifs = NotificationService.that.getActiveNotifications();
+			adapter.update(notifs);
 			defaultActivity.runOnUiThread(new Runnable() {
 
 				@Override
 				public void run() {
 					
-					grid.setNumColumns(adapter.getCount());
+					grid.setNumColumns(notifs.length);
 					adapter.notifyDataSetChanged();
 				}
 				
 			});
 		}
+		
 		
 		public static void debug_notification(Context ctx, boolean showhide) {
 			if (showhide) {
@@ -451,6 +466,7 @@ public class Functions {
 	    		Intent startServiceIntent = new Intent(ctx, ViewCoverService.class);
 	    		ctx.startService(startServiceIntent);
 	    	}
+
         }
 		
 		
@@ -465,8 +481,8 @@ public class Functions {
 		public static void activity_result(Context ctx, int request, int result, Intent data) {
 			Log.d("F.Evt.activity_result", "Activity result received: request=" + Integer.toString(request) + ", result=" + Integer.toString(result));
 			switch (request) {
-			  //call back for admin access request
-			  case DEVICE_ADMIN_WAITING:
+			//call back for admin access request
+			case DEVICE_ADMIN_WAITING:
 				if (result == Activity.RESULT_OK) {
 					// we asked to be an admin and the user clicked Activate
 					// (the intent receiver takes care of showing a toast)
@@ -478,43 +494,81 @@ public class Functions {
 					Toast.makeText(ctx, ctx.getString(R.string.admin_refused), Toast.LENGTH_SHORT).show();
 					Log.d("F.Evt.activity_result", "pref_enabled = " + Boolean.toString(PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_enabled", true)));
 					PreferenceManager.getDefaultSharedPreferences(ctx)
-							.edit()
-							.putBoolean("pref_enabled", false)
-							.commit();
+						.edit()
+						.putBoolean("pref_enabled", false)
+						.commit();
 					Log.d("F.Evt.activity_result", "pref_enabled = " + Boolean.toString(PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_enabled", true)));
+					
 				}
 				break;
-			  //call back for appwidget pick	
-			  case REQUEST_PICK_APPWIDGET:
+				//call back for appwidget pick	
+			case REQUEST_PICK_APPWIDGET:
 				//widget picked
+				widget_settings_ongoing = false;
 				if (result == Activity.RESULT_OK) {
 					//widget chosen so launch configurator
 					hmAppWidgetManager.configureWidget(data, ctx);
 				} else {
 					//choose dialog cancelled so clean up
 					int appWidgetId = data.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
-			        if (appWidgetId != -1) {
-			        	hmAppWidgetManager.deleteAppWidgetId(appWidgetId);
+					if (appWidgetId != -1) {
+						hmAppWidgetManager.deleteAppWidgetId(appWidgetId);
+						PreferenceManager.getDefaultSharedPreferences(ctx)
+							.edit()
+							.putBoolean("pref_" + hmAppWidgetManager.currentWidgetType + "_widget", false) // FIXME this is a huge hack
+							.commit();
 					}
+					
 				}
 				break;		
-			  //call back for appwidget configure
-			  case REQUEST_CONFIGURE_APPWIDGET:
+			//call back for appwidget configure
+			case REQUEST_CONFIGURE_APPWIDGET:
+				widget_settings_ongoing = false;
 				//widget configured
 				if (result == Activity.RESULT_OK) {
 					//widget configured successfully so create it
 					hmAppWidgetManager.createWidget(data, ctx);
 				} else {
 					//configure dialog cancelled so clean up
-					int appWidgetId = data.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
-			        if (appWidgetId != -1) {
-			        	hmAppWidgetManager.deleteAppWidgetId(appWidgetId);
+					if (data != null) {
+						int appWidgetId = data.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
+						if (appWidgetId != -1) {
+							hmAppWidgetManager.deleteAppWidgetId(appWidgetId);
+							PreferenceManager.getDefaultSharedPreferences(ctx)
+								.edit()
+								.putBoolean("pref_" + hmAppWidgetManager.currentWidgetType + "_widget", false) // FIXME this is a huge hack
+								.commit();
+						}
 					}
-				break;			
-			    }
+					
+				}
+				break;
+				
+			
+			case NOTIFICATION_LISTENER_ON:
+				Log.d("F-oAR", "return from checking the box");
+				notification_settings_ongoing = false;
+				if (!Functions.Is.service_running(ctx, NotificationService.class)) {
+                	Toast.makeText(ctx, ctx.getString(R.string.notif_left_unchecked), Toast.LENGTH_SHORT).show();
+                	PreferenceManager.getDefaultSharedPreferences(ctx)
+                		.edit()
+                		.putBoolean("pref_do_notifications", false)
+                		.commit();
+                }
+				break;
+			case NOTIFICATION_LISTENER_OFF:
+				Log.d("F-oAR", "return from unchecking the box");
+				notification_settings_ongoing = false;
+				if (Functions.Is.service_running(ctx, NotificationService.class)) {
+                	Toast.makeText(ctx, ctx.getString(R.string.notif_left_checked), Toast.LENGTH_SHORT).show();
+                	PreferenceManager.getDefaultSharedPreferences(ctx)
+                		.edit()
+                		.putBoolean("pref_do_notifications", true)
+                		.commit();
+                }
+				break;
 			}
 		}
-		
 		
 		/**
 		 * Invoked via the AdminReceiver when the admin status changes.
@@ -579,8 +633,25 @@ public class Functions {
 			//Log.d(ctx.getString(R.string.app_name), String.format("cover_closed = %b", cover_closed));
 		}
 
+		public static void headset(final Context ctx, int state) {
+			if (state != 0) {
+				// headset was just inserted
+				if (Is.cover_closed(ctx)) {
+					new Handler().postDelayed(new Runnable() {
+						@Override
+						public void run() {
+							ctx.getApplicationContext().startActivity(new Intent(ctx.getApplicationContext(), DefaultActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+						}
+					}, 500); // FIXME this is by far the biggest hack yet
+				}
+			}
+			
+			if (defaultActivity.on_screen) {
+				defaultActivity.refreshDisplay();
+			}
+		}
 
-		public static void incoming_call(final Context ctx, final String number) {
+		public static void incoming_call(final Context ctx, String number) {
 			Log.d("phone", "call from " + number);
 			if (Functions.Is.cover_closed(ctx)) {
 				Log.d("phone", "but the screen is closed. screen my calls");
@@ -590,8 +661,9 @@ public class Functions {
 				//to guarantee that we need to hold off until the dialer activity is running
 				//a 1 second delay seems to allow this
 				DefaultActivity.phone_ringing = true;
+				DefaultActivity.call_from = number;
 
-                Timer timer = new Timer();
+				Timer timer = new Timer();
 				timer.schedule(new TimerTask() {
 					@Override
 					public void run() {
@@ -600,15 +672,32 @@ public class Functions {
 							          | Intent.FLAG_ACTIVITY_CLEAR_TOP
 							          | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
 						intent.setAction(Intent.ACTION_MAIN);
-						
-						// parameter
-                        intent.putExtra(DefaultActivity.INTENT_phoneWidgetShow, true);
-						intent.putExtra(DefaultActivity.INTENT_phoneWidgetIncomingNumber, number);
-						
-						// start
 						ctx.startActivity(intent);
+
+						Util.rise_and_shine(ctx); // make sure the screen is on
 					}
 				}, 500);
+				
+				/*
+				new Handler().postDelayed(new Runnable() {
+					@Override
+					public void run() {
+						Process process;
+						try {
+							process = Runtime.getRuntime().exec(new String[]{ "su","-c","input keyevent 6"});
+							process.waitFor();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					    
+					}
+				}, 500);
+				*/
+				
 			}
 		}
 		
@@ -616,6 +705,7 @@ public class Functions {
 			Log.d("phone", "call is over, cleaning up");
 			DefaultActivity.phone_ringing = false;
 			((TextView)defaultActivity.findViewById(R.id.call_from)).setText(ctx.getString(R.string.unknown_caller));
+			Actions.close_cover(ctx);
 		}
 	}
 	
@@ -657,20 +747,20 @@ public class Functions {
 		 * @param ctx Application context.
 		 * @return Is the cover closed.
 		 */
-		public static boolean service_running(Context ctx) {
+		public static boolean service_running(Context ctx, Class svc) {
 			
 			Log.d("F.Is.service_running", "Is service running called.");
 			
 			ActivityManager manager = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
 			for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-				if (ViewCoverService.class.getName().equals(service.service.getClassName())) {
+				if (svc.getName().equals(service.service.getClassName())) {
 					// the service is running
-					Log.d("F.Is.service_running", "The service is running.");
+					Log.d("F.Is.service_running", "The " + svc.getName() + " is running.");
 					return true;
 				}
 			}
 			// the service must not be running
-			Log.d("F.Is.service_running", "The service is NOT running.");
+			Log.d("F.Is.service_running", "The " + svc.getName() + " service is NOT running.");
 			return false;
 		}
 		
@@ -691,6 +781,11 @@ public class Functions {
 			
 			return widgetEnabled;
 		}
+		
+		
+		
+		
+		
 	}
 	
 	public static class Util {
@@ -722,6 +817,15 @@ public class Functions {
 
 		    Log.d("phone", "...result is " + name);
 		    return name;
+		}
+
+		public static void rise_and_shine(Context ctx) {
+			//FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
+			Log.d("F.Util.rs", "aww why can't I hit snooze");
+			PowerManager pm  = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
+			PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, ctx.getString(R.string.app_name));
+	        wl.acquire();
+	        wl.release();
 		}
 	}
 
