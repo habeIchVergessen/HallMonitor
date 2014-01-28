@@ -21,6 +21,13 @@
     <item type="id" name="option_overlay_menu_button"/>
     <item type="id" name="option_overlay"/>
 
+    <!-- id's used by phone -->
+    <item type="id" name="menu_phone_ringer_normal"/>
+    <item type="id" name="menu_phone_ringer_vibrate"/>
+    <item type="id" name="menu_phone_ringer_silent"/>
+    <item type="id" name="menu_phone_speaker"/>
+    <item type="id" name="menu_phone_mic"/>
+
     <item type="id" name="dumpApplicationState" />
     <item type="id" name="restartApplication" />
 

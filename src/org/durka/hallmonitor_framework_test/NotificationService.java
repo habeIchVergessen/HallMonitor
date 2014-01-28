@@ -25,11 +25,13 @@ import android.service.notification.StatusBarNotification;
 
 
 public class NotificationService extends NotificationListenerService {
-	
+
+    private final String mTorchNotificationName = "net.cactii.flash2";
+
 	public static NotificationService that = null;
 
 	private final List<String> blacklist = new ArrayList<String>() {{
-			add("net.cactii.flash2"); // we have our own flashlight UI
+			add(mTorchNotificationName); // we have our own flashlight UI
 			add("android");           // this covers the keyboard selection notification, but does it clobber others too? TODO
 	}};
 
@@ -78,6 +80,19 @@ public class NotificationService extends NotificationListenerService {
     private void Log_d(String tag, String message) {
         if (PreferenceManager.getDefaultSharedPreferences(getBaseContext()).getBoolean("pref_dev_opts_debug", false))
             Log.d(tag, message);
+    }
+
+    public boolean isTorchOn() {
+        boolean result = false;
+
+        for (StatusBarNotification statusBarNotification : super.getActiveNotifications()) {
+            if (statusBarNotification.getPackageName().equals(mTorchNotificationName)) {
+                result = true;
+                break;
+            }
+        }
+
+        return result;
     }
 
 	@Override

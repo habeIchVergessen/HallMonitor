@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
@@ -674,12 +675,33 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
     public void onMenuInit(ComponentFramework.MenuController menuController) {
         Log_d(LOG_TAG, "onMenuInit:");
 
-        menuController.registerMenuOption(getMenuId(), R.id.dumpApplicationState, R.drawable.ic_option_overlay_option1);
-        menuController.registerMenuOption(getMenuId(), R.id.restartApplication, R.drawable.ic_option_overlay_option2);
+        menuController.registerMenuOption(getMenuId(), R.id.menu_phone_speaker, R.drawable.ic_phone_speaker_on);
+        menuController.registerMenuOption(getMenuId(), R.id.menu_phone_mic, R.drawable.ic_phone_mic_off);
     }
 
     public boolean onMenuOpen(ComponentFramework.MenuController.Menu menu) {
         Log_d(LOG_TAG, "onMenuOpen: ");
+
+        TelephonyManager telephonyManager = (TelephonyManager)getContext().getSystemService(Context.TELEPHONY_SERVICE);
+
+        // don't open menu until a call is active
+        if (telephonyManager.getCallState() != TelephonyManager.CALL_STATE_OFFHOOK)
+            return false;
+
+        AudioManager audioManager = (AudioManager)getContext().getSystemService(Context.AUDIO_SERVICE);
+
+        for (int optionId : menu.getOptions()) {
+            ComponentFramework.MenuController.Option option = menu.getOption(optionId);
+
+            switch (option.getId()) {
+                case R.id.menu_phone_speaker:
+                    option.setImageId(audioManager.isSpeakerphoneOn() ? R.drawable.ic_phone_speaker_off : R.drawable.ic_phone_speaker_on);
+                    break;
+                case R.id.menu_phone_mic:
+                    option.setImageId(!audioManager.isMicrophoneMute() ? R.drawable.ic_phone_mic_off : R.drawable.ic_phone_mic_on);
+                    break;
+            }
+        }
 
         return true;
     }
@@ -687,12 +709,16 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
     public void onMenuAction(ComponentFramework.MenuController.MenuOption menuOption) {
         Log_d(LOG_TAG, "onMenuAction: " + menuOption.getOptionId());
 
+        AudioManager audioManager = (AudioManager)getContext().getSystemService(Context.AUDIO_SERVICE);
+
         switch (menuOption.getOptionId()) {
-            case R.id.dumpApplicationState:
-                getContainer().dumpApplicationState();
+            case R.id.menu_phone_speaker:
+                audioManager.setSpeakerphoneOn(menuOption.getImageId() == R.drawable.ic_phone_speaker_on);
+                menuOption.setImageId(audioManager.isSpeakerphoneOn() ? R.drawable.ic_phone_speaker_off : R.drawable.ic_phone_speaker_on);
                 break;
-            case R.id.restartApplication:
-                forceRestart();
+            case R.id.menu_phone_mic:
+                audioManager.setMicrophoneMute(menuOption.getImageId() == R.drawable.ic_phone_mic_off);
+                menuOption.setImageId(!audioManager.isMicrophoneMute() ? R.drawable.ic_phone_mic_off : R.drawable.ic_phone_mic_on);
                 break;
         }
     }

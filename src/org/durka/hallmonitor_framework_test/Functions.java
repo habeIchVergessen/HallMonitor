@@ -391,8 +391,8 @@ public class Functions {
 		public static void hangup_call() {
 			Log_d("phone", "hanging up! goodbye");
 			run_commands_as_root(new String[]{"input keyevent 6"}, false);
-			DefaultActivity.phone_ringing = false;
-			defaultActivity.refreshDisplay();
+//			DefaultActivity.phone_ringing = false;
+//			defaultActivity.refreshDisplay();
 		}
 		
 		public static void pickup_call() {

@@ -120,7 +120,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 	
 	@Override
 	public void onDestroy() {
-		Log.d(LOG_TAG + ".onStartCommand", "View cover service stopped");
+//		Log.d(LOG_TAG + ".onStartCommand", "View cover service stopped");
 		
 		mSensorManager.unregisterListener(this);
 
@@ -132,14 +132,14 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 	@Override
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
 		// I don't care
-		Log.d(LOG_TAG + "onAccuracyChanged", "OnAccuracyChanged: Sensor=" + sensor.getName() + ", accuracy=" + accuracy);
+//		Log.d(LOG_TAG + "onAccuracyChanged", "OnAccuracyChanged: Sensor=" + sensor.getName() + ", accuracy=" + accuracy);
 	}
 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		
 		if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {	
-			Log.d(LOG_TAG + ".onSensorChanged", "Proximity sensor changed, value=" + event.values[0]);
+//			Log.d(LOG_TAG + ".onSensorChanged", "Proximity sensor changed, value=" + event.values[0]);
 			Functions.Events.proximity(this, event.values[0]);
 			
 			//improve reliability by refiring the event 200ms afterwards
@@ -174,16 +174,16 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     {
         switch (initStatus) {
             case TextToSpeech.SUCCESS:
-                Log.d(LOG_TAG, "init Text To Speech successed");
+//                Log.d(LOG_TAG, "init Text To Speech successed");
                 //mTts.setLanguage(Locale.GERMANY);
                 mTtsInitComplete = true;
                 break;
             case TextToSpeech.ERROR:
-                Log.d(LOG_TAG, "init Text To Speech failed");
+//                Log.d(LOG_TAG, "init Text To Speech failed");
                 mTts = null;
                 break;
             default:
-                Log.d(LOG_TAG, "onInit: " + initStatus);
+//                Log.d(LOG_TAG, "onInit: " + initStatus);
                 break;
         }
     }
@@ -236,7 +236,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     }
 
     private void stopTextToSpeech() {
-        Log.d(LOG_TAG, "stopTextToSpeech: ");
+//        Log.d(LOG_TAG, "stopTextToSpeech: ");
         if (mTtsInitComplete && mTts != null)
             mTts.stop();
     }
@@ -253,7 +253,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
      */
 
     private void restartFrameworkTest(final Bundle extras, int delay) {
-        Log.d(LOG_TAG, "restartFrameworkTest: " + extras + ", " + delay);
+//        Log.d(LOG_TAG, "restartFrameworkTest: " + extras + ", " + delay);
         if (delay > 0) {
             Timer timer = new Timer();
 
@@ -268,7 +268,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     }
 
     private void restartFrameworkTest(final Bundle extras) {
-        Log.d(LOG_TAG, "restartFrameworkTest: " + extras);
+//        Log.d(LOG_TAG, "restartFrameworkTest: " + extras);
         Intent start = new Intent(getBaseContext(), ComponentTestActivity.class);
         start.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
         // restore extras from previously running task

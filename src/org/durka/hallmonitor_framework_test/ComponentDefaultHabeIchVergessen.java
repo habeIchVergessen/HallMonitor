@@ -5,8 +5,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Typeface;
+import android.media.AudioManager;
 import android.os.BatteryManager;
 import android.service.notification.StatusBarNotification;
+import android.telephony.TelephonyManager;
 import android.text.SpannableString;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
@@ -79,21 +81,50 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
     public void onMenuInit(ComponentFramework.MenuController menuController) {
         Log_d(LOG_TAG, "onMenuInit:");
 
+        menuController.registerMenuOption(getMenuId(), R.id.menu_phone_ringer_normal, R.drawable.ic_phone_speaker_on);
+        menuController.registerMenuOption(getMenuId(), R.id.menu_phone_ringer_vibrate, R.drawable.ic_phone_vibrate);
+        menuController.registerMenuOption(getMenuId(), R.id.menu_phone_ringer_silent, R.drawable.ic_phone_speaker_off);
         menuController.registerMenuOption(getMenuId(), R.id.camerabutton, R.drawable.ic_notification);
         menuController.registerMenuOption(getMenuId(), R.id.torchbutton, R.drawable.ic_appwidget_torch_off);
-        menuController.registerMenuOption(getMenuId(), R.id.dumpApplicationState, R.drawable.ic_option_overlay_option1);
     }
 
     public boolean onMenuOpen(ComponentFramework.MenuController.Menu menu) {
-        Log_d(LOG_TAG, "onMenuOpen: ");
+        Log_d(LOG_TAG, "onMenuOpen: " + menu.getId() + ", " + menu.getOptions().toString());
 
-        // read notifications for torch state
+        AudioManager audioManager = (AudioManager)getContext().getSystemService(Context.AUDIO_SERVICE);
 
+        for (int optionId : menu.getOptions()) {
+            ComponentFramework.MenuController.Option option = menu.getOption(optionId);
+
+            switch (option.getId()) {
+                case R.id.menu_phone_ringer_normal:
+                    Log_d(LOG_TAG, "onMenuOpen: menu_phone_ringer_normal " + (audioManager.getRingerMode() != AudioManager.RINGER_MODE_NORMAL));
+                    option.setEnabled(audioManager.getRingerMode() != AudioManager.RINGER_MODE_NORMAL);
+                    break;
+                case R.id.menu_phone_ringer_vibrate:
+                    Log_d(LOG_TAG, "onMenuOpen: menu_phone_ringer_vibrate " + (audioManager.getRingerMode() != AudioManager.RINGER_MODE_VIBRATE));
+                    option.setEnabled(audioManager.getRingerMode() != AudioManager.RINGER_MODE_VIBRATE);
+                    break;
+                case R.id.menu_phone_ringer_silent:
+                    Log_d(LOG_TAG, "onMenuOpen: menu_phone_ringer_silent " + (audioManager.getRingerMode() != AudioManager.RINGER_MODE_SILENT));
+                    option.setEnabled(audioManager.getRingerMode() != AudioManager.RINGER_MODE_SILENT);
+                    break;
+                case R.id.torchbutton:
+                    // read notifications for torch state
+                    if (NotificationService.that != null) {
+                        boolean isTorchOn = NotificationService.that.isTorchOn();
+                        option.setImageId(!isTorchOn ? R.drawable.ic_appwidget_torch_off : R.drawable.ic_appwidget_torch_on);
+                    }
+                    break;
+            }
+        }
         return true;
     }
 
     public void onMenuAction(ComponentFramework.MenuController.MenuOption menuOption) {
         Log_d(LOG_TAG, "onMenuAction: " + menuOption.getOptionId());
+
+        AudioManager audioManager = (AudioManager)getContext().getSystemService(Context.AUDIO_SERVICE);
 
         switch (menuOption.getOptionId()) {
             case R.id.camerabutton:
@@ -108,8 +139,14 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
 
                 menuOption.setImageId((menuOption.getImageId() == R.drawable.ic_appwidget_torch_off ? R.drawable.ic_appwidget_torch_on : R.drawable.ic_appwidget_torch_off));
                 break;
-            case R.id.dumpApplicationState:
-                getContainer().dumpApplicationState();
+            case R.id.menu_phone_ringer_normal:
+                audioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+                break;
+            case R.id.menu_phone_ringer_vibrate:
+                audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
+                break;
+            case R.id.menu_phone_ringer_silent:
+                audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
                 break;
         }
     }

@@ -941,8 +941,11 @@ public class ComponentFramework {
         }
 
         public class Option {
+            final private String LOG_TAG = "Option";
+
             private int mOptionId;
             private int mImageId;
+            private boolean mEnabled = true;
             private Object mStateObject;
 
             protected Option(int optionId, int imageId) {
@@ -968,6 +971,13 @@ public class ComponentFramework {
 
             protected void setImageId(int imageId) {
                 mImageId = imageId;
+            }
+
+            protected boolean isEnabled() { return mEnabled; }
+
+            protected void setEnabled(boolean enabled) {
+                Log.d(LOG_TAG, "setEnabled: " + getResources().getResourceName(mOptionId) + ", " + enabled);
+                mEnabled = enabled;
             }
         }
 
@@ -1002,6 +1012,14 @@ public class ComponentFramework {
 
             public void setImageId(int imageId) {
                 mOption.setImageId(imageId);
+            }
+
+            public boolean isEnabled() {
+                return mOption.isEnabled();
+            }
+
+            public void setEnabled(boolean enabled) {
+                mOption.setEnabled(enabled);
             }
         }
 
@@ -1474,9 +1492,25 @@ public class ComponentFramework {
         }
 
         private boolean setupMenu(Menu menu) {
+            int skipDisabled = 0;
+
             for (int idx=0; idx<mOptionViews.size(); idx++) {
                 ImageView imageView = (ImageView)mOptionViews.values().toArray()[idx];
-                Option option = menu.getOption(idx);
+
+                Option option = null;
+
+                for (int oIdx=idx+skipDisabled; oIdx<menu.getOptions().size(); oIdx++) {
+                    option = menu.getOption(oIdx);
+
+                    if (option != null) {
+                        Log_d(LOG_TAG, "setupMenu: " + getResources().getResourceName(option.getId()) + ", " + option.isEnabled());
+                        if (!option.isEnabled())
+                            skipDisabled++;
+                        else
+                            break;
+                    } else
+                        break;
+                }
 
                 imageView.setVisibility((option == null ? INVISIBLE : VISIBLE));
                 imageView.setTag((option == null ? null : new MenuOption(menu, option)));
