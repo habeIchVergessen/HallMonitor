@@ -16,6 +16,8 @@ package org.durka.hallmonitor_framework_test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.sql.Time;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.Timer;
@@ -33,6 +35,7 @@ import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -44,14 +47,19 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     private final static String LOG_TAG = "VCS";
 
     private final static String hallFileName = "/sys/devices/virtual/sec/sec_key/hall_detect";
+
     private float lastProximityValue = 0.0f;
     private static boolean globalCoverState = false;
     private CoverThread coverThread = null;
     private RestartThread restartThread = null;
+
     private ComponentFramework.OnCoverStateChangedListener mOnCoverStateChangedListener = null;
+    private ComponentFramework.OnGyroscopeChangedListener mOnGyroscopeChangedListener = null;
 
     private static ViewCoverService runningInstance = null;
 	private SensorManager       mSensorManager;
+
+    private long mLastGyroscopeReported;
 
     private static boolean mDebug = false;
 
@@ -95,8 +103,8 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 
 		mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 		
-		mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_NORMAL);
-		
+		mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_UI);
+
         // Text-To-Speech
         initTextToSpeech();
 
@@ -110,6 +118,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 
         runningInstance = this;
         globalCoverState = isCoverClosedPrivate();
+        mLastGyroscopeReported = System.currentTimeMillis();
 
         return START_STICKY;
 	}
@@ -147,6 +156,19 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 		if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
             proximity(event.values[0]);
 		}
+        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+            if (mLastGyroscopeReported + 500 <= System.currentTimeMillis()) {
+                final float aX = event.values[0];
+                final float aY = event.values[1];
+                final float aZ = event.values[2];
+                final float sensitivity = 3.0f;
+
+                if (Math.abs(aX) >= sensitivity || Math.abs(aZ) >= sensitivity && mOnGyroscopeChangedListener != null) {
+                    mOnGyroscopeChangedListener.onGyroscopeChanged();
+                    mLastGyroscopeReported = System.currentTimeMillis();
+                }
+            }
+        }
 	}
 
     /**
@@ -304,16 +326,29 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
         return result;
     }
 
-    private void registerOnCoverStateChangedListenerPrivate(ComponentFramework.OnCoverStateChangedListener onCoverStateChangedListener) {
+    private synchronized void registerOnCoverStateChangedListenerPrivate(ComponentFramework.OnCoverStateChangedListener onCoverStateChangedListener) {
         Log_d(LOG_TAG, "registerOnCoverStateChangedListenerPrivate");
         mOnCoverStateChangedListener = onCoverStateChangedListener;
     }
 
-    private void unregisterOnCoverStateChangedListenerPrivate(ComponentFramework.OnCoverStateChangedListener onCoverStateChangedListener) {
+    private synchronized void unregisterOnCoverStateChangedListenerPrivate(ComponentFramework.OnCoverStateChangedListener onCoverStateChangedListener) {
         Log_d(LOG_TAG, "unregisterOnCoverStateChangedListenerPrivate");
 
         if (mOnCoverStateChangedListener == onCoverStateChangedListener)
             mOnCoverStateChangedListener = null;
+    }
+
+    private synchronized void registerOnGyroscopeChangedListenerPrivate(ComponentFramework.OnGyroscopeChangedListener onGyroscopeChangedListener) {
+        if (mOnGyroscopeChangedListener == null)
+            mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_UI);
+        mOnGyroscopeChangedListener = onGyroscopeChangedListener;
+    }
+
+    private synchronized void unregisterOnGyroscopeChangedListenerPrivate(ComponentFramework.OnGyroscopeChangedListener onGyroscopeChangedListener) {
+        if (mOnGyroscopeChangedListener == onGyroscopeChangedListener) {
+            mSensorManager.unregisterListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE));
+            mOnGyroscopeChangedListener = null;
+        }
     }
 
     private void restartFrameworkTest(final Bundle extras, int delay) {
@@ -372,6 +407,17 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
         if (runningInstance != null)
             runningInstance.unregisterOnCoverStateChangedListenerPrivate(onCoverStateChangedListener);
     }
+
+    public static void registerOnGyroscopeChangedListener(ComponentFramework.OnGyroscopeChangedListener onGyroscopeChangedListener) {
+        if (runningInstance != null)
+            runningInstance.registerOnGyroscopeChangedListenerPrivate(onGyroscopeChangedListener);
+    }
+
+    public static void unregisterOnGyroscopeChangedListener(ComponentFramework.OnGyroscopeChangedListener onGyroscopeChangedListener) {
+        if (runningInstance != null)
+            runningInstance.unregisterOnGyroscopeChangedListenerPrivate(onGyroscopeChangedListener);
+    }
+
 
     public static void setDebugMode(boolean debug) {
         mDebug = debug;

@@ -41,6 +41,7 @@ public class ComponentCamera extends ComponentFramework.Layout {
             @Override
             public void onClick(View view) {
                 setVisibility(INVISIBLE);
+                getContainer().dumpBackStack();
             }
         });
     }

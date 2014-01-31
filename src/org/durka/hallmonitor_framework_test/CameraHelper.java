@@ -34,7 +34,7 @@ public class CameraHelper {
 		// size to the first one in the list defined in "arrays.xml" and is also
 		// supported by the driver.
 		List<Size> supported = parameters.getSupportedPictureSizes();
-        String[] pictureSizes = pictureSizes = context.getResources().getStringArray(R.array.pref_camera_picturesize_entryvalues);
+        String[] pictureSizes = context.getResources().getStringArray(R.array.pref_camera_picturesize_entryvalues);
 
 		if (supported == null || pictureSizes == null) {
             return;

@@ -62,6 +62,10 @@ public class ComponentFramework {
         public void onCoverStateChanged(boolean coverClosed);
     }
 
+    public interface OnGyroscopeChangedListener {
+        public void onGyroscopeChanged();
+    }
+
     public static abstract class Activity extends android.app.Activity {
 
         private final String LOG_TAG = "ComponentFramework.Activity";
@@ -555,7 +559,7 @@ public class ComponentFramework {
             int idx = 0;
             for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
                 if (entry.getValue() != layout) {
-                    mBackStack.put(idx, layout);
+                    mBackStack.put(idx, entry.getValue());
                     idx++;
                 } else
                     mBackStack.remove(entry.getKey());

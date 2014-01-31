@@ -35,9 +35,6 @@
 	        <extra
 	            android:name="resource"
 	            android:value="preferences_phone" />
-	        <extra
-	            android:name="title"
-	            android:value="@string/pref_phone_screen_title" />
 	    </org.durka.hallmonitor_framework_test.PreferenceSwitchable>
 	    
 </PreferenceScreen>

@@ -60,7 +60,8 @@ public class ComponentTestPreferences extends PreferenceActivity {
                 getFragmentManager().executePendingTransactions();
 
                 // update action bar
-                updateHeaderTitle(preference.getTitle());
+                String title = preference.getExtras().getString("title", (String)preference.getTitle());
+                updateHeaderTitle(title);
             } else
                 Log_d(LOG_TAG, "onPreferenceStartFragment: given class is not a PreferenceFragment");
         } catch (Exception e) {
