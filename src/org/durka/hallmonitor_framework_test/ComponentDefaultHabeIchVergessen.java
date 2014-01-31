@@ -61,17 +61,14 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
     public void onResume() {
         Log_d(LOG_TAG, "onResume");
 
-        if (NotificationService.that != null) {
-            NotificationService.that.registerOnNotificationChangedListener(this);
+        if (NotificationService.registerOnNotificationChangedListener(this))
             onNotificationChanged();
-        }
     }
 
     public void onPause() {
         Log_d(LOG_TAG, "onPause");
 
-        if (NotificationService.that != null)
-            NotificationService.that.unregisterOnNotificationChangedListener(this);
+        NotificationService.unregisterOnNotificationChangedListener(this);
     }
 
     public int getMenuId() {
@@ -86,6 +83,7 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
         menuController.registerMenuOption(getMenuId(), R.id.menu_phone_ringer_silent, R.drawable.ic_phone_speaker_off);
         menuController.registerMenuOption(getMenuId(), R.id.camerabutton, R.drawable.ic_notification);
         menuController.registerMenuOption(getMenuId(), R.id.torchbutton, R.drawable.ic_appwidget_torch_off);
+//        menuController.registerMenuOption(getMenuId(), R.id.menu_test, R.drawable.ic_option_overlay_option1);
     }
 
     public boolean onMenuOpen(ComponentFramework.MenuController.Menu menu) {
@@ -111,10 +109,7 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
                     break;
                 case R.id.torchbutton:
                     // read notifications for torch state
-                    if (NotificationService.that != null) {
-                        boolean isTorchOn = NotificationService.that.isTorchOn();
-                        option.setImageId(!isTorchOn ? R.drawable.ic_appwidget_torch_off : R.drawable.ic_appwidget_torch_on);
-                    }
+                    option.setImageId(!NotificationService.isTorchOn() ? R.drawable.ic_appwidget_torch_off : R.drawable.ic_appwidget_torch_on);
                     break;
             }
         }
@@ -148,17 +143,22 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
             case R.id.menu_phone_ringer_silent:
                 audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
                 break;
+            case R.id.menu_test:
+                getContainer().dumpBackStack();
+                break;
         }
     }
 
     /**
      * OnNotificationChanged
      */
-    public void onNotificationChanged() {
-        Log_d(LOG_TAG, "onNotificationChanged");
+    public synchronized void onNotificationChanged() {
+//        Log_d(LOG_TAG, "onNotificationChanged");
 
-        if (NotificationService.that != null) {
-            Log_d(LOG_TAG, "onNotificationChanged: service is running");
+        StatusBarNotification[] notifs = NotificationService.getActiveNotificationsStatic();
+
+        if (notifs != null) {
+//            Log_d(LOG_TAG, "onNotificationChanged: service is running");
             final GridView grid = (GridView)findViewById(R.id.default_icon_container);
 
             if (grid == null) {
@@ -167,24 +167,30 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
             }
 
             if (!(grid.getAdapter() instanceof NotificationService)) {
-                StatusBarNotification[] notifs = NotificationService.that.getActiveNotifications();
-
                 final NotificationAdapter nA = new NotificationAdapter(getContext(), notifs);
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        grid.setNumColumns(nA.getCount());
-                        grid.setAdapter(nA);
+                        try {
+                            grid.setNumColumns(nA.getCount());
+                            grid.setAdapter(nA);
+                        } catch (Exception e) {
+                            Log_d(LOG_TAG, "onNotificationChanged: exception occurred! " + e.getMessage());
+                        }
                     }
                 });
             } else {
                 final NotificationAdapter adapter = (NotificationAdapter)grid.getAdapter();
-                adapter.update(NotificationService.that.getActiveNotifications());
+                adapter.update(notifs);
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        grid.setNumColumns(adapter.getCount());
-                        adapter.notifyDataSetChanged();
+                        try {
+                            grid.setNumColumns(adapter.getCount());
+                            adapter.notifyDataSetChanged();
+                        } catch (Exception e) {
+                            Log_d(LOG_TAG, "onNotificationChanged: exception occurred! " + e.getMessage());
+                        }
                     }
                 });
             }

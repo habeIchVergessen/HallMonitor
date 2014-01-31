@@ -22,11 +22,12 @@ import java.util.HashSet;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class ComponentTestActivity extends ComponentFramework.Activity implements ComponentFramework.OnScreenOffTimerListener, ComponentFramework.OnWakeUpScreenListener, ComponentFramework.OnKeepOnScreen {
+public class ComponentTestActivity extends ComponentFramework.Activity implements ComponentFramework.OnScreenOffTimerListener, ComponentFramework.OnWakeUpScreenListener, ComponentFramework.OnKeepOnScreen, ComponentFramework.OnCoverStateChangedListener {
 
     private final String LOG_TAG = "ComponentTestActivity";
 
     private boolean mIsActivityPaused = true;
+    private boolean mOnWakeUpScreenCalled = false;
 
     @Override
     protected void onCreate(Bundle saveInstanceState) {
@@ -51,6 +52,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
         intentFilter.addAction(Intent.ACTION_SCREEN_ON);
 
         registerReceiver(receiver, intentFilter);
+        ViewCoverService.registerOnCoverStateChangedListener(this);
     }
 
     @Override
@@ -61,19 +63,21 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
+    protected void onResume() {
+        Log_d(LOG_TAG, "onResume");
+        mIsActivityPaused = false;
+        onStartScreenOffTimer();
 
-        Log_d(LOG_TAG, "onPause");
-        mIsActivityPaused = true;
+        super.onResume();
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
+    protected void onPause() {
+        Log_d(LOG_TAG, "onPause");
+        super.onPause();
 
-        Log_d(LOG_TAG, "onResume");
-        mIsActivityPaused = false;
+        onStopScreenOffTimer();
+        mIsActivityPaused = true;
     }
 
     @Override
@@ -89,6 +93,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
 
         // unregister receivers
         unregisterReceiver(receiver);
+        ViewCoverService.unregisterOnCoverStateChangedListener(this);
 
         super.onDestroy();
     }
@@ -132,8 +137,15 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
     public boolean onStartScreenOffTimer() {
         Log_d(LOG_TAG, "onStartScreenOffTimer");
 
-        Functions.Actions.rearmScreenOffTimer(getApplicationContext());
-        return true;
+        TelephonyManager telephonyManager = (TelephonyManager)getSystemService(TELEPHONY_SERVICE);
+
+        // phone handles screen off timer
+        if (telephonyManager.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
+            Functions.Actions.rearmScreenOffTimer(getApplicationContext());
+            return true;
+        }
+
+        return false;
     }
 
     public boolean onStopScreenOffTimer() {
@@ -150,11 +162,13 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
         PowerManager pm  = (PowerManager) getApplicationContext().getSystemService(Context.POWER_SERVICE);
 
         if (!pm.isScreenOn()) {
-            Log.d(LOG_TAG, "wakeUpScreen");
+            Log_d(LOG_TAG, "wakeUpScreen");
             //FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
             PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, getApplicationContext().getString(R.string.app_name_framework));
             wl.acquire();
             wl.release();
+
+            mOnWakeUpScreenCalled = true;
         }
     }
 
@@ -178,6 +192,20 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
     }
 
     /**
+     * implement OnCoverStateChangedListener
+     */
+    public void onCoverStateChanged(boolean coverClosed) {
+        Log_d(LOG_TAG, "onCoverStateChangedListener: " + coverClosed);
+
+        if (coverClosed) {
+            if (mIsActivityPaused)
+                onKeepOnScreen(getContainer().getApplicationState());
+        } else {
+            moveTaskToBack(true);
+        }
+    }
+
+    /**
      * receiver
      */
     // we need to kill this activity when the screen opens
@@ -189,15 +217,29 @@ public class ComponentTestActivity extends ComponentFramework.Activity implement
             if (action.equals(Intent.ACTION_SCREEN_ON)) {
                 Log_d(LOG_TAG + ".onReceive", "ACTION_SCREEN_ON = " + mIsActivityPaused);
 
-                if (mIsActivityPaused)
-                    onKeepOnScreen(getContainer().getApplicationState());
+                // don't handle software driven screen on actions
+                if (mOnWakeUpScreenCalled) {
+                    mOnWakeUpScreenCalled = false;
+                    return;
+                }
+
+                // seems user has turned on the screen
+                if (ViewCoverService.isCoverClosed()) {
+                    if (mIsActivityPaused)
+                        onKeepOnScreen(getContainer().getApplicationState());
+                    else
+                        onStartScreenOffTimer();
+                } else {
+                    moveTaskToBack(true);
+                }
             } else if (action.equals(TelephonyManager.ACTION_PHONE_STATE_CHANGED)) {
                 String phoneExtraState = intent.getStringExtra(TelephonyManager.EXTRA_STATE);
 
                 Log_d(LOG_TAG + ".onReceive", "ACTION_PHONE_STATE_CHANGED = " + mIsActivityPaused + ", " + phoneExtraState);
                 // give ComponentPhone a chance to handle the call
                 if (mIsActivityPaused && phoneExtraState.equals(TelephonyManager.EXTRA_STATE_RINGING)) {
-                    onKeepOnScreen(getContainer().getApplicationState(), 500);
+//                    onKeepOnScreen(getContainer().getApplicationState(), 100);
+                    onWakeUpScreen();
                 }
             }
         }

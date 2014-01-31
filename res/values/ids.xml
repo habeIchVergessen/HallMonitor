@@ -28,7 +28,6 @@
     <item type="id" name="menu_phone_speaker"/>
     <item type="id" name="menu_phone_mic"/>
 
-    <item type="id" name="dumpApplicationState" />
-    <item type="id" name="restartApplication" />
+    <item type="id" name="menu_test" />
 
 </resources>

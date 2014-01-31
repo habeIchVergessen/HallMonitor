@@ -21,6 +21,7 @@ public class NotificationAdapter extends BaseAdapter {
 	private StatusBarNotification[] notifs;
 	private Context that;
 
+    private static boolean mDebug = false;
     private final int numOfItems = 10;
 	
 	public NotificationAdapter(Context ctx, StatusBarNotification[] n) {
@@ -101,8 +102,12 @@ public class NotificationAdapter extends BaseAdapter {
         return (connectivityManager.getNetworkInfo(connectionType).getState() == NetworkInfo.State.CONNECTED);
     }
 
+    public static void setDebugMode(boolean debug) {
+        mDebug = debug;
+    }
+
     private void Log_d(String tag, String message) {
-        if (DefaultActivity.isDebug())
+        if (mDebug)
             Log.d(tag, message);
     }
 }

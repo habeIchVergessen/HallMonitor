@@ -24,6 +24,7 @@ import android.widget.TextView;
 
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -57,6 +58,10 @@ public class ComponentFramework {
         public void onKeepOnScreen(final Bundle extras, int delay);
     }
 
+    public interface OnCoverStateChangedListener {
+        public void onCoverStateChanged(boolean coverClosed);
+    }
+
     public static abstract class Activity extends android.app.Activity {
 
         private final String LOG_TAG = "ComponentFramework.Activity";
@@ -72,24 +77,41 @@ public class ComponentFramework {
             super.onPause();
 
             // propagate to layout's
-            if (getContainer() != null)
+            if (getContainer() != null) {
                 getContainer().onPause();
+                getContainer().dumpBackStack();
+            }
         }
 
         @Override
         protected void onResume() {
             super.onResume();
 
+            boolean debug = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_dev_opts_debug", false);
+
             // propagate to layout's
             if (getContainer() != null) {
-                getContainer().setDebugMode((mDebug = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_dev_opts_debug", false)));
+                if (debug != mDebug)
+                    getContainer().setDebugMode(debug);
+
+                getContainer().dumpBackStack();
                 getContainer().onResume();
             }
+
             // propagate to menu
             if (getMenuController() != null) {
-                getMenuController().setDebugMode(mDebug);
+                if (debug != mDebug)
+                    getMenuController().setDebugMode(debug);
             }
 
+            mDebug = debug;
+
+            // forward debug settings
+            Functions.setDebugMode(mDebug);
+            ViewCoverService.setDebugMode(mDebug);
+            HMAppWidgetManager.setDebugMode(mDebug);
+            NotificationAdapter.setDebugMode(mDebug);
+            NotificationService.setDebugMode(mDebug);
         }
 
         @Override
@@ -120,14 +142,14 @@ public class ComponentFramework {
                 if (getMenuController() != null && getMenuController().isAbsCoordsMatchingMenuHitBox(motionEvent) && dispatchTouchEventToView(motionEvent, getMenuController())) {
                     // don't track if container already tracks
                     if (getContainer() != null && mTrackedTouchEvent.containsValue(getContainer())) {
-                        Log_d(LOG_TAG, "dispatchTouchEvent: excluded from tracking " + pointerId);
+//                        Log_d(LOG_TAG, "dispatchTouchEvent: excluded from tracking " + pointerId);
                         mTrackedTouchEvent.put(pointerId, null);
                     // don't track 2 menu actions
                     } else if (mTrackedTouchEvent.containsValue(getMenuController())) {
-                        Log_d(LOG_TAG, "dispatchTouchEvent: excluded from tracking " + pointerId);
+//                        Log_d(LOG_TAG, "dispatchTouchEvent: excluded from tracking " + pointerId);
                         mTrackedTouchEvent.put(pointerId, null);
                     } else {
-                        Log_d(LOG_TAG, "dispatchTouchEvent: start tracking menu #" + pointerId);
+//                        Log_d(LOG_TAG, "dispatchTouchEvent: start tracking menu #" + pointerId);
                         mTrackedTouchEvent.put(pointerId, getMenuController());
                     }
                 }
@@ -140,10 +162,10 @@ public class ComponentFramework {
                     if (visibleRect.contains((int)pointerCoords.x, (int)pointerCoords.y) && dispatchTouchEventToView(motionEvent, getContainer())) {
                         // don't track if menu already tracks
                         if (getMenuController() != null && mTrackedTouchEvent.containsValue(getMenuController())) {
-                            Log_d(LOG_TAG, "dispatchTouchEvent: excluded from tracking " + pointerId);
+//                            Log_d(LOG_TAG, "dispatchTouchEvent: excluded from tracking " + pointerId);
                             mTrackedTouchEvent.put(pointerId, null);
                         } else {
-                            Log_d(LOG_TAG, "dispatchTouchEvent: start tracking container #" + pointerId);
+//                            Log_d(LOG_TAG, "dispatchTouchEvent: start tracking container #" + pointerId);
                             mTrackedTouchEvent.put(pointerId, getContainer());
                         }
                     }
@@ -156,19 +178,25 @@ public class ComponentFramework {
 
             // MOVE
             if ((actionMasked == MotionEvent.ACTION_MOVE)) {
+                boolean trackedPointer = false;
                 Child child = null;
 
                 // search tracked pointers
                 for (Iterator<Integer> trackedIds = mTrackedTouchEvent.keySet().iterator(); trackedIds.hasNext(); ) {
                     pointerId = trackedIds.next();
 
-                    if (motionEvent.findPointerIndex(pointerId) != UNDEFINED_POINTER && dispatchTouchEventToView(motionEvent, (child = mTrackedTouchEvent.get(pointerId)))) {
-                        //Log_d(LOG_TAG, "dispatchTouchEvent: tracked pointer " + child.getClass().getName());
+                    if (motionEvent.findPointerIndex(pointerId) != UNDEFINED_POINTER) {
+                        trackedPointer = true;
+
+                        if ((child = mTrackedTouchEvent.get(pointerId)) != null) {
+                            //Log_d(LOG_TAG, "dispatchTouchEvent: tracked pointer " + child.getClass().getName());
+                            dispatchTouchEventToView(motionEvent, child);
+                        }
                     }
                 }
 
                 // not in the tracked list (others)
-                if (child == null)
+                if (!trackedPointer)
                     super.dispatchTouchEvent(motionEvent);
             }
 
@@ -178,13 +206,16 @@ public class ComponentFramework {
 
                 // clean up tracking list
                 if (mTrackedTouchEvent.containsKey(pointerId)) {
-                    dispatchTouchEventToView(motionEvent, (child = mTrackedTouchEvent.get(pointerId)));
+                    child = mTrackedTouchEvent.get(pointerId);
 
-                    Log_d(LOG_TAG, "dispatchTouchEvent: stop tracking #" + pointerId + ", " + child.getClass().getName());
+                    if (child != null)
+                        dispatchTouchEventToView(motionEvent, child);
+
+//                    Log_d(LOG_TAG, "dispatchTouchEvent: stop tracking #" + pointerId);
                     mTrackedTouchEvent.remove(pointerId);
                 // send to others
                 } else {
-                    Log_d(LOG_TAG, "dispatchTouchEvent: send to super");
+//                    Log_d(LOG_TAG, "dispatchTouchEvent: send to super");
                     super.dispatchTouchEvent(motionEvent);
                 }
             }
@@ -366,6 +397,9 @@ public class ComponentFramework {
         }
 
         private void initApplicationState() {
+            if (isInEditMode())
+                return;
+
             if (getActivity() != null && getActivity().getIntent() != null && getActivity().getIntent().getExtras() != null) {
                 mApplicationState = getActivity().getIntent().getExtras();
                 Log_d(LOG_TAG, "initApplicationState: restore prior application state #" + mApplicationState.size());
@@ -396,7 +430,7 @@ public class ComponentFramework {
                 (loading = initLayout(mLayoutClassName)) != null ||                             // class name from styled attr
                 (loading = new DefaultLayout(mContext, mAttributeSet)) != null) {               // resource id from styled attr
                 mLayoutView = loading;
-                mBackStack.put(mBackStack.size(), loading);
+                addToBackStack(loading, 0);
             }
 
             addView(mLayoutView);
@@ -474,53 +508,83 @@ public class ComponentFramework {
                 mLayoutView.setVisibility(VISIBLE);
         }
 
+        private synchronized void moveOnTopOfBackStack(Layout layout) {
+            addToBackStack(layout, (!mBackStack.containsValue(layout) ? -1 : mBackStack.size() - 1));
+        }
+
+        private synchronized void addToBackStack(Layout layout) {
+            addToBackStack(layout, -1);
+        }
+
+        private synchronized void addToBackStack(Layout layout, int position) {
+//            Log.d(LOG_TAG, "addToBackStack: " + position + " (" + mBackStack.size() + "), " + layout.getClass().getName());
+            if (position < 0) {
+                mBackStack.put(mBackStack.size(), layout);
+            } else {
+                // resort list
+                if (mBackStack.containsValue(layout)) {
+                    int idx = 0;
+                    for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
+                        if (entry.getValue() != layout) {
+                            mBackStack.put(idx, entry.getValue());
+                            idx++;
+                        } else
+                            mBackStack.remove(entry.getKey());
+                    }
+                    mBackStack.put(idx, layout);
+                // insert at position
+                } else {
+                    int idx = 0;
+                    for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
+                        if (position == idx) {
+                            mBackStack.put(idx, layout);
+                            idx++;
+                        }
+                        mBackStack.put(idx, entry.getValue());
+                        idx++;
+                    }
+                    // position out of range (move on top)
+                    if (!mBackStack.containsValue(layout))
+                        mBackStack.put(mBackStack.size(), layout);
+                }
+            }
+        }
+
+        private synchronized void removeFromBackStack(Layout layout) {
+//            Log.d(LOG_TAG, "removeFromBackStack: " + layout.getClass().getName());
+            int idx = 0;
+            for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
+                if (entry.getValue() != layout) {
+                    mBackStack.put(idx, layout);
+                    idx++;
+                } else
+                    mBackStack.remove(entry.getKey());
+            }
+        }
+
+        public void dumpBackStack() {
+            for (Integer key : mBackStack.keySet())
+                Log_d(LOG_TAG, "key: '" + key + "' -> '" + mBackStack.get(key) + "'");
+        }
+
         @Override
         public void bringChildToFront(View child) {
             if (mLayoutInflated && (child instanceof Layout)) {
-                try {
-                    final Layout backStack = mBackStack.get(mBackStack.size() - 1);
-                    final Layout lastBackStack = mBackStack.get(mBackStack.size() - 2);
-                    final Layout layout = (Layout)child;
+                // child invisible
+                if (!child.isShown())
+                    return;
 
-                    // layout invisible
-                    if (!child.isShown())
-                        return;
-
-                    // add to list
-                    if (!mBackStack.containsValue(layout)) {
-                        mBackStack.put(mBackStack.size(), layout);
-                    // resort list
-                    } else {
-                        int idx = 0;
-                        for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
-                            if (entry.getValue() != layout) {
-                                mBackStack.put(idx, entry.getValue());
-                                idx++;
-                            } else
-                                mBackStack.remove(entry.getKey());
-                        }
-                        mBackStack.put(idx, layout);
-                    }
-
-                } catch (Exception e) {
-                    Log_d(LOG_TAG, "bringChildToFront: exception occurred! " + e.getMessage());
-                }
+                moveOnTopOfBackStack((Layout)child);
             }
 
             super.bringChildToFront(child);
         }
 
         public void sendChildToBack(View child) {
-            if (!mBackStack.containsValue(child) || !(child instanceof Layout))
+            if (!(child instanceof Layout))
                 return;
 
-            Layout layout = (Layout)child;
-
-            for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
-                if (entry.getValue() == layout) {
-                    mBackStack.remove(entry.getKey());
-                }
-            }
+            removeFromBackStack((Layout) child);
         }
 
         @Override
@@ -539,6 +603,8 @@ public class ComponentFramework {
 
         @Override
         final public void setDebugMode(boolean debugMode) {
+            if (mDebug == debugMode)
+                return;
             super.setDebugMode(debugMode);
             Log_d(LOG_TAG, "setDebugMode: " + debugMode + ", #" + getChildCount());
 
@@ -566,13 +632,58 @@ public class ComponentFramework {
             return result;
         }
 
+        public void onResume() {
+            Log_d(LOG_TAG, "onResume: enter");
+            // copy extras from intent
+            Log_d(LOG_TAG, "onResume: load from intent extras");
+            initApplicationState();
+
+            setDebugMode(getPrefBoolean("pref_dev_opts_debug", false));
+
+            // create temp. list
+            HashSet<View> childs = new HashSet<View>();
+            for (int idx=getChildCount() - 1; idx >=0; idx--)
+                childs.add(getChildAt(idx));
+
+            // propagate resume to child views
+            int idx = 0;
+            for (Iterator<View> childIterator = childs.iterator(); childIterator.hasNext(); ) {
+                View child = childIterator.next();
+
+                if ((child instanceof Layout)  && OnPauseResumeListener.class.isAssignableFrom(child.getClass())) {
+                    Log_d(LOG_TAG, "onResume: #" + idx + " -> " + child.getClass().getName());
+                    ((OnPauseResumeListener)child).onResume();
+                }
+                idx++;
+            }
+
+            // propagate preview to child views
+            if (mPreviewMode == null && getActivity().getIntent().getExtras() != null && !getActivity().getIntent().getExtras().getString("preview", "").equals("")) {
+                mPreviewMode = getActivity().getIntent().getExtras().getString("preview");
+
+                idx = 0;
+                for (Iterator<View> childIterator = childs.iterator(); childIterator.hasNext(); ) {
+                    View child = childIterator.next();
+
+                    if ((child instanceof Layout) && OnPreviewComponentListener.class.isAssignableFrom(child.getClass()) &&
+                       ((OnPreviewComponentListener)child).onPreviewComponent()) {
+                        Log_d(LOG_TAG, "onResume: preview -> " + child.getClass().getName());
+                        child.setVisibility(VISIBLE);
+                        break;
+                    }
+                    idx++;
+                }
+            }
+            Log_d(LOG_TAG, "onResume: leave");
+        }
+
         public void onPause() {
             // propagate to child views
             for (int idx=0; idx<getChildCount(); idx++) {
                 if (getChildAt(idx) instanceof Layout) {
                     Layout layout = (Layout)getChildAt(idx);
 
-                    if (OnPauseResumeListener.class.isAssignableFrom(layout.getClass()))//) && layout.isShown())
+                    if (OnPauseResumeListener.class.isAssignableFrom(layout.getClass()))
                         ((OnPauseResumeListener)layout).onPause();
                 }
             }
@@ -580,34 +691,6 @@ public class ComponentFramework {
             // save application state to intent extras
             Log_d(LOG_TAG, "onPause: save in intent extras");
             getActivity().getIntent().putExtras(getApplicationState());
-        }
-
-        public void onResume() {
-            // copy extras from intent
-            Log_d(LOG_TAG, "onResume: load from intent extras");
-            initApplicationState();
-
-            setDebugMode(getPrefBoolean("pref_dev_opts_debug", false));
-
-            // propagate resume to child views
-            for (int idx=0; idx<getChildCount(); idx++) {
-                if ((getChildAt(idx) instanceof Layout)  && OnPauseResumeListener.class.isAssignableFrom(getChildAt(idx).getClass()))// && getChildAt(idx).isShown())
-                    ((OnPauseResumeListener)getChildAt(idx)).onResume();
-            }
-
-            // propagate preview to child views
-            if (mPreviewMode == null && getActivity().getIntent().getExtras() != null && !getActivity().getIntent().getExtras().getString("preview", "").equals("")) {
-                mPreviewMode = getActivity().getIntent().getExtras().getString("preview");
-
-                for (int idx=0; idx<getChildCount(); idx++) {
-                    if ((getChildAt(idx) instanceof Layout) && OnPreviewComponentListener.class.isAssignableFrom(getChildAt(idx).getClass()) &&
-                       ((OnPreviewComponentListener)getChildAt(idx)).onPreviewComponent()) {
-                        Log_d(LOG_TAG, "onResume: preview -> " + getChildAt(idx).getClass().getName());
-                        getChildAt(idx).setVisibility(VISIBLE);
-                        break;
-                    }
-                }
-            }
         }
 
         public void onStop() {
@@ -678,11 +761,11 @@ public class ComponentFramework {
         }
 
         @Override
-        public void onPause() {
+        public void onResume() {
         }
 
         @Override
-        public void onResume() {
+        public void onPause() {
         }
     }
 
@@ -714,7 +797,7 @@ public class ComponentFramework {
         }
 
         @Override
-        final public void setVisibility(int visibility) {
+        final synchronized public void setVisibility(int visibility) {
             Log_d(LOG_TAG, "setVisibility");
             switch (visibility) {
                 case VISIBLE:
@@ -722,24 +805,25 @@ public class ComponentFramework {
                     if (mLayoutView == null && !initLayout())
                         return;
 
-                    if (mLayoutView != null && onOpenComponent()) {
-                        if (OnPauseResumeListener.class.isAssignableFrom(mLayoutView.getClass()))
-                            ((OnPauseResumeListener)mLayoutView).onResume();
-                        super.setVisibility(VISIBLE);
+                    if (mLayoutView != null) {
+                        if (!mLayoutView.isShown()) {
+                            if (onOpenComponent())
+                                super.setVisibility(VISIBLE);
+                            else
+                                clearChildViews();
+                        }
+
                         // handle default layout visibility
-                        if (getContainer() != null)
+                        if (mLayoutView.isShown() && getContainer() != null)
                             getContainer().bringChildToFront(this);
-                    } else
-                        clearChildViews();
+                    }
                     break;
                 case INVISIBLE:
                 case GONE:
-                    if (mLayoutView != null) {
-                        if (OnPauseResumeListener.class.isAssignableFrom(mLayoutView.getClass()))
-                            ((OnPauseResumeListener)mLayoutView).onPause();
+                    if (mLayoutView != null && mLayoutView.isShown()) {
                         onCloseComponent();
                     }
-                    super.setVisibility(INVISIBLE);
+                    super.setVisibility(visibility);
                     // handle default layout visibility
                     if (getContainer() != null)
                         getContainer().sendChildToBack(this);
@@ -823,7 +907,7 @@ public class ComponentFramework {
          * <br/>
          * @return result from activity method call or false if activity doesn't implement the listener
          */
-        protected boolean startScreenOffTimer() {
+        protected synchronized boolean startScreenOffTimer() {
             boolean result = false;
 
             if (getActivity() != null) {
@@ -841,7 +925,7 @@ public class ComponentFramework {
          * <br/>
          * @return result from activity method call or false if activity doesn't implement the listener
          */
-        protected boolean stopScreenOffTimer() {
+        protected synchronized boolean stopScreenOffTimer() {
             boolean result = false;
 
             if (getActivity() != null) {
@@ -881,7 +965,8 @@ public class ComponentFramework {
 
         private final static String LOG_TAG = "MenuController";
 
-        private HashMap<Integer,PointF> mOptionMenuTrack = new HashMap<Integer, PointF>();
+        private final int UNDEFINED_TOUCH_EVENT_ACTION_INDEX = -1;
+        private int mOptionMenuTrack = UNDEFINED_TOUCH_EVENT_ACTION_INDEX;
         private HashMap<Integer,ImageView> mOptionViews = new HashMap<Integer, ImageView>();
 
         private int mBackgroundColor = 0xCC000000;
@@ -976,7 +1061,6 @@ public class ComponentFramework {
             protected boolean isEnabled() { return mEnabled; }
 
             protected void setEnabled(boolean enabled) {
-                Log.d(LOG_TAG, "setEnabled: " + getResources().getResourceName(mOptionId) + ", " + enabled);
                 mEnabled = enabled;
             }
         }
@@ -1140,7 +1224,6 @@ public class ComponentFramework {
             final int actionIndex = motionEvent.getActionIndex();
             final int actionMasked = motionEvent.getActionMasked();
             final int pointerId = actionIndex;
-            PointF downPoint = null;
             double radius = 0;
 
             // override with absolute coordinates
@@ -1153,25 +1236,33 @@ public class ComponentFramework {
             pointerCoords.setAxisValue(MotionEvent.AXIS_X, pointerCoords.x + mOptionMenuRect.left);
             pointerCoords.setAxisValue(MotionEvent.AXIS_Y, pointerCoords.y + mOptionMenuRect.top);
 
-//            Log_d(LOG_TAG, "onTouchEvent: " + pointerCoords.x + ":" + pointerCoords.y + ", tracked #" + mOptionMenuTrack.size() + ", " + motionEvent.getPointerId(actionIndex));
-
-            final float dX = motionEvent.getX(actionIndex), mX = mOptionMenuRect.centerX();
-            final float dY = motionEvent.getY(actionIndex), mY = mOptionMenuRect.centerY();
+            final float mX = mOptionMenuRect.centerX(), mY = mOptionMenuRect.centerY();
+            float dX = motionEvent.getX(actionIndex), dY = motionEvent.getY(actionIndex);
 
             switch (actionMasked) {
                 case MotionEvent.ACTION_DOWN:
                 case MotionEvent.ACTION_POINTER_DOWN:
                     // just handle 1 event
-                    if (mOptionMenuTrack.size() > 0)
+                    if (mOptionMenuTrack != UNDEFINED_TOUCH_EVENT_ACTION_INDEX)
                         break;
 
                     if (isAbsCoordsMatchingMenuHitBox(mX, mY, dX, dY, rX, rY)) {
-                        mOptionMenuTrack.put(motionEvent.getPointerId(actionIndex), new PointF(mX, mY));
+                        mOptionMenuTrack = motionEvent.getPointerId(actionIndex);
                         boolean opened = openMenu();
                     }
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    if (isOpen() && (downPoint = mOptionMenuTrack.get(motionEvent.getPointerId(actionIndex))) != null) {
+                    if (mOptionMenuTrack == UNDEFINED_TOUCH_EVENT_ACTION_INDEX)
+                        break;
+
+                    int pointerIndex = motionEvent.findPointerIndex(mOptionMenuTrack);
+
+                    if (pointerIndex != UNDEFINED_TOUCH_EVENT_ACTION_INDEX) {
+                        // read coordinates
+                        motionEvent.getPointerCoords(pointerIndex, pointerCoords);
+                        dX = pointerCoords.x;
+                        dY = pointerCoords.y;
+
                         // TODO calc arc's doesn't work properly (until then break here)
                         if (dY > mY)
                             break;
@@ -1216,8 +1307,8 @@ public class ComponentFramework {
                     break;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_POINTER_UP:
-                    if ((downPoint = mOptionMenuTrack.get(motionEvent.getPointerId(actionIndex))) != null) {
-                        mOptionMenuTrack.remove(motionEvent.getPointerId(actionIndex));
+                    if (mOptionMenuTrack != UNDEFINED_TOUCH_EVENT_ACTION_INDEX) {
+                        mOptionMenuTrack = UNDEFINED_TOUCH_EVENT_ACTION_INDEX;
 //                      Log_d(LOG_TAG, "UP|POINTER_UP: " + motionEvent.getPointerId(actionIndex) + " #" + mOptionMenuTrack.size());
 
                         // snap is enabled and option is selected
@@ -1295,7 +1386,7 @@ public class ComponentFramework {
         }
 
         public boolean isOpen() {
-            return (mOptions.getVisibility() == View.VISIBLE);
+            return mOptions.isShown();
         }
 
         public void animateMenuButton(boolean animate) {
@@ -1323,6 +1414,10 @@ public class ComponentFramework {
                     Log_d(LOG_TAG, "openMenu: canceled. " + menu);
                     return false;
                 }
+
+                // restart screen off timer
+                if (OnScreenOffTimerListener.class.isAssignableFrom(getActivity().getClass()))
+                    ((OnScreenOffTimerListener)getActivity()).onStartScreenOffTimer();
 
                 setupMenu(menu);
             } catch (Exception e) {

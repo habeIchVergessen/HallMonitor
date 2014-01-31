@@ -170,18 +170,6 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
     /**
      * implement OnPauseResumeListener
      */
-    public void onPause() {
-        Log_d(LOG_TAG, "onPause");
-
-        TelephonyManager telephonyManager = (TelephonyManager)getContext().getSystemService(getActivity().TELEPHONY_SERVICE);
-        telephonyManager.listen(mImplPhoneStateListener, PhoneStateListener.LISTEN_NONE);
-
-        if (isPhoneShow()) {
-            Log_d(LOG_TAG, "force restart (overdrive telephone manager)");
-            forceRestart();
-        }
-    }
-
     public void onResume() {
         Log_d(LOG_TAG, "onResume");
 
@@ -189,6 +177,18 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
         telephonyManager.listen(mImplPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE | PhoneStateListener.LISTEN_CALL_FORWARDING_INDICATOR);
 
         initPhoneWidget();
+    }
+
+    public void onPause() {
+        Log_d(LOG_TAG, "onPause");
+
+        TelephonyManager telephonyManager = (TelephonyManager)getContext().getSystemService(getActivity().TELEPHONY_SERVICE);
+        telephonyManager.listen(mImplPhoneStateListener, PhoneStateListener.LISTEN_NONE);
+
+        if (isPhoneShow() && ViewCoverService.isCoverClosed()) {
+            Log_d(LOG_TAG, "force restart (overdrive telephone manager)");
+            forceRestart();
+        }
     }
 
     /**
@@ -218,18 +218,17 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
      * phone widget stuff
      */
 
-    private void initPhoneWidget() {
-        Log_d(LOG_TAG, "initPhoneWidget: ");
+    private synchronized void initPhoneWidget() {
+        Log_d(LOG_TAG, "initPhoneWidget: enter");
         final TelephonyManager telephonyManager = (TelephonyManager)mContext.getSystemService(getActivity().TELEPHONY_SERVICE);
 
         // check phone state (if not invoked by intent)
-        if (!isPhoneShow()) {
+        if (!isPhoneShow() || getVisibility() != VISIBLE) {
             int callState = telephonyManager.getCallState();
 
             if (callState == TelephonyManager.CALL_STATE_RINGING || callState == TelephonyManager.CALL_STATE_OFFHOOK) {
                 Log_d(LOG_TAG, "initPhoneWidget: ringing/off hook detected");
-                final String incomingNumber = "";
-                //telephonyManager.notify();
+                final String incomingNumber = getIncomingNumber();
 
                 Log_d(LOG_TAG, "initPhoneWidget: number = '" + incomingNumber + "'");
                 getContainer().getApplicationState().putBoolean(INTENT_phoneWidgetShow, true);
@@ -244,6 +243,7 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
                 }
             }
         }
+        Log_d(LOG_TAG, "initPhoneWidget: leave");
     }
 
     private boolean setIncomingNumber(String incomingNumber) {
@@ -259,6 +259,10 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
         getContainer().getApplicationState().putString(INTENT_phoneWidgetIncomingNumber, incomingNumber);
 
         return result;
+    }
+
+    private String getIncomingNumber() {
+        return getContainer().getApplicationState().getString(INTENT_phoneWidgetIncomingNumber, "");
     }
 
     private boolean setDisplayNameByIncomingNumber(String incomingNumber) {
@@ -508,11 +512,7 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
-                for (int idx=0; idx < motionEvent.getPointerCount(); idx++)
-                    if (motionEvent.getPointerId(idx) == mActivePointerId) {
-                        pointerIndex = idx;
-                        break;
-                    }
+                pointerIndex = motionEvent.findPointerIndex(mActivePointerId);
 
                 // process tracking
                 if (TouchEventProcessor.isTracking() && pointerIndex != UNDEFINED_TOUCH_EVENT_ACTION_INDEX) {
@@ -677,6 +677,7 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
 
         menuController.registerMenuOption(getMenuId(), R.id.menu_phone_speaker, R.drawable.ic_phone_speaker_on);
         menuController.registerMenuOption(getMenuId(), R.id.menu_phone_mic, R.drawable.ic_phone_mic_off);
+//        menuController.registerMenuOption(getMenuId(), R.id.menu_test, R.drawable.ic_option_overlay_option1);
     }
 
     public boolean onMenuOpen(ComponentFramework.MenuController.Menu menu) {
@@ -685,7 +686,7 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
         TelephonyManager telephonyManager = (TelephonyManager)getContext().getSystemService(Context.TELEPHONY_SERVICE);
 
         // don't open menu until a call is active
-        if (telephonyManager.getCallState() != TelephonyManager.CALL_STATE_OFFHOOK)
+        if (telephonyManager.getCallState() == TelephonyManager.CALL_STATE_IDLE)
             return false;
 
         AudioManager audioManager = (AudioManager)getContext().getSystemService(Context.AUDIO_SERVICE);
@@ -696,9 +697,14 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
             switch (option.getId()) {
                 case R.id.menu_phone_speaker:
                     option.setImageId(audioManager.isSpeakerphoneOn() ? R.drawable.ic_phone_speaker_off : R.drawable.ic_phone_speaker_on);
+                    option.setEnabled(telephonyManager.getCallState() == TelephonyManager.CALL_STATE_OFFHOOK);
                     break;
                 case R.id.menu_phone_mic:
                     option.setImageId(!audioManager.isMicrophoneMute() ? R.drawable.ic_phone_mic_off : R.drawable.ic_phone_mic_on);
+                    option.setEnabled(telephonyManager.getCallState() == TelephonyManager.CALL_STATE_OFFHOOK);
+                    break;
+                case R.id.menu_test:
+                    option.setEnabled(telephonyManager.getCallState() == TelephonyManager.CALL_STATE_RINGING);
                     break;
             }
         }
@@ -720,6 +726,9 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
                 audioManager.setMicrophoneMute(menuOption.getImageId() == R.drawable.ic_phone_mic_off);
                 menuOption.setImageId(!audioManager.isMicrophoneMute() ? R.drawable.ic_phone_mic_off : R.drawable.ic_phone_mic_on);
                 break;
+            case R.id.menu_test:
+                getContainer().dumpBackStack();
+                break;
         }
     }
 
@@ -728,7 +737,7 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
         if (!isPhoneRestartForced() && ComponentFramework.OnKeepOnScreen.class.isAssignableFrom(getActivity().getClass())) {
             setPhoneRestartForced(true);
 
-            ((ComponentFramework.OnKeepOnScreen)getActivity()).onKeepOnScreen(getContainer().getApplicationState());
+            ((ComponentFramework.OnKeepOnScreen)getActivity()).onKeepOnScreen(getContainer().getApplicationState(), 50);
         }
     }
 }

@@ -29,6 +29,9 @@ public class NotificationService extends NotificationListenerService {
     private final String mTorchNotificationName = "net.cactii.flash2";
 
 	public static NotificationService that = null;
+    private static NotificationService runningInstance = null;
+
+    private static boolean mDebug = false;
 
 	private final List<String> blacklist = new ArrayList<String>() {{
 			add(mTorchNotificationName); // we have our own flashlight UI
@@ -44,7 +47,7 @@ public class NotificationService extends NotificationListenerService {
 	@Override
 	public void onCreate() {
 		Log_d("NS-oC", "ohai");
-		that = this;
+		that = runningInstance = this;
 
         mOnNotificationChangedListeners = new HashSet<OnNotificationChangedListener>();
 	}
@@ -52,28 +55,36 @@ public class NotificationService extends NotificationListenerService {
 	@Override
 	public void onDestroy() {
 		Log_d("NS-oD", "kthxbai");
-		that = null;
+		that = runningInstance = null;
 	}
 	
 	@Override
-	public void onNotificationPosted(StatusBarNotification sbn) {
+	public synchronized void onNotificationPosted(StatusBarNotification sbn) {
         for (OnNotificationChangedListener onNotificationChangedListener : mOnNotificationChangedListeners) {
-            onNotificationChangedListener.onNotificationChanged();
+            try {
+                onNotificationChangedListener.onNotificationChanged();
+            } catch (Exception e) {
+                Log.e("NS-oNP", "exception occurred! " + e.getMessage());
+            }
         }
 	}
 
 	@Override
-	public void onNotificationRemoved(StatusBarNotification sbn) {
+	public synchronized void onNotificationRemoved(StatusBarNotification sbn) {
         for (OnNotificationChangedListener onNotificationChangedListener : mOnNotificationChangedListeners) {
-            onNotificationChangedListener.onNotificationChanged();
+            try {
+                onNotificationChangedListener.onNotificationChanged();
+            } catch (Exception e) {
+                Log.e("NS-oNR", "exception occurred! " + e.getMessage());
+            }
         }
 	}
 
-    public void registerOnNotificationChangedListener(OnNotificationChangedListener onNotificationChangedListener) {
+    private synchronized void registerOnNotificationChangedListenerPrivate(OnNotificationChangedListener onNotificationChangedListener) {
         mOnNotificationChangedListeners.add(onNotificationChangedListener);
     }
 
-    public void unregisterOnNotificationChangedListener(OnNotificationChangedListener onNotificationChangedListener) {
+    private synchronized void unregisterOnNotificationChangedListenerPrivate(OnNotificationChangedListener onNotificationChangedListener) {
         mOnNotificationChangedListeners.add(onNotificationChangedListener);
     }
 
@@ -82,15 +93,12 @@ public class NotificationService extends NotificationListenerService {
             Log.d(tag, message);
     }
 
-    public boolean isTorchOn() {
+    private boolean isTorchOnPrivate() {
         boolean result = false;
 
-        for (StatusBarNotification statusBarNotification : super.getActiveNotifications()) {
-            if (statusBarNotification.getPackageName().equals(mTorchNotificationName)) {
-                result = true;
+        for (StatusBarNotification statusBarNotification : super.getActiveNotifications())
+            if ((result = statusBarNotification.getPackageName().equals(mTorchNotificationName)))
                 break;
-            }
-        }
 
         return result;
     }
@@ -101,12 +109,51 @@ public class NotificationService extends NotificationListenerService {
 		
 		List<StatusBarNotification> acc = new ArrayList<StatusBarNotification>(notifs.length);
 		for (StatusBarNotification sbn : notifs) {
-			Log.d("NS-gAN", sbn.getPackageName());
+//			Log_d("NS-gAN", sbn.getPackageName());
 			if (!blacklist.contains(sbn.getPackageName())) {
 				acc.add(sbn);
 			}
 		}
 		return acc.toArray(new StatusBarNotification[acc.size()]);
 	}
+
+    /**
+     * public static functions
+     */
+    public static boolean isTorchOn() {
+        boolean result = false;
+
+        if (runningInstance != null)
+            result = runningInstance.isTorchOnPrivate();
+
+        return result;
+    }
+
+    public static StatusBarNotification[] getActiveNotificationsStatic() {
+        StatusBarNotification[] result = null;
+
+        if (runningInstance != null)
+            result = runningInstance.getActiveNotifications();
+
+        return result;
+    }
+
+    public static boolean registerOnNotificationChangedListener(OnNotificationChangedListener onNotificationChangedListener) {
+        boolean result = false;
+
+        if (result = (runningInstance != null))
+            runningInstance.registerOnNotificationChangedListenerPrivate(onNotificationChangedListener);
+
+        return result;
+    }
+
+    public static void unregisterOnNotificationChangedListener(OnNotificationChangedListener onNotificationChangedListener) {
+        if (runningInstance != null)
+            runningInstance.unregisterOnNotificationChangedListenerPrivate(onNotificationChangedListener);
+    }
+
+    public static void setDebugMode(boolean debug) {
+        mDebug = debug;
+    }
 
 }

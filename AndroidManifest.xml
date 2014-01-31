@@ -45,15 +45,16 @@
         android:theme="@style/AppTheme" >
 
         <activity
-            android:name="org.durka.hallmonitor_framework_test.Configuration"
-            android:label="@string/app_name" >
-<!--
+            android:label="Hallmonitor (Framework Test)"
+            android:name="org.durka.hallmonitor_framework_test.ComponentTestPreferences"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
--->        </activity>
+        </activity>
 
         <service
             android:name="org.durka.hallmonitor_framework_test.ViewCoverService" >
@@ -94,17 +95,6 @@
         </receiver>
 
         <activity
-            android:name="org.durka.hallmonitor_framework_test.DefaultActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:noHistory="true"
-            android:screenOrientation="portrait"
-            android:theme="@style/FullscreenTheme">
-            <intent-filter>
-                <action android:name="android.intent.action.HEADSET_PLUG" />
-            </intent-filter>
-        </activity>
-
-        <activity
             android:name="org.durka.hallmonitor_framework_test.ComponentTestActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:noHistory="true"
@@ -112,18 +102,6 @@
             android:theme="@style/FullscreenTheme">
             <intent-filter>
                 <action android:name="android.intent.action.HEADSET_PLUG" />
-            </intent-filter>
-        </activity>
-
-        <activity
-            android:label="Hallmonitor (Framework Test)"
-            android:name="org.durka.hallmonitor_framework_test.ComponentTestPreferences"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:screenOrientation="portrait">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 

@@ -26,7 +26,8 @@ public class HMAppWidgetManager {
 	
 	//track which widget we are currently dealing with - holds state across the events firing
 	//this is a bit clunky, but there's no need to worry about thread safety so should be fine
-	private String currentWidgetType;
+	public String currentWidgetType;
+    private static boolean mDebug = false;
 	
 	//app widget management classes we need
 	public AppWidgetManager mAppWidgetManager;
@@ -127,14 +128,14 @@ public class HMAppWidgetManager {
 	    
 	    //debug out all the info about the widget
 	    if (Log.isLoggable("HMAWM.createWidget", Log.DEBUG)){
-	    	Log.d("HMAWM.createWidget", "appWidgetInfo Label: " + appWidgetInfo.label);
-	    	Log.d("HMAWM.createWidget", "appWidgetInfo minHeight: " + appWidgetInfo.minHeight);
-	    	Log.d("HMAWM.createWidget", "appWidgetInfo minResizeWidth: " + appWidgetInfo.minResizeHeight);
-	    	Log.d("HMAWM.createWidget", "appWidgetInfo minWidth: " + appWidgetInfo.minWidth);
-	    	Log.d("HMAWM.createWidget", "appWidgetInfo minResizeWidth: " + appWidgetInfo.minResizeWidth);
-	    	Log.d("HMAWM.createWidget", "appWidgetInfo resizeMode: " + appWidgetInfo.resizeMode);
-	    	Log.d("HMAWM.createWidget", "appWidgetInfo updatePeriodMillis: " + appWidgetInfo.updatePeriodMillis);
-	    	Log.d("HMAWM.createWidget", "appWidgetInfo widgetCategory: " + appWidgetInfo.widgetCategory);
+	    	Log_d("HMAWM.createWidget", "appWidgetInfo Label: " + appWidgetInfo.label);
+	    	Log_d("HMAWM.createWidget", "appWidgetInfo minHeight: " + appWidgetInfo.minHeight);
+	    	Log_d("HMAWM.createWidget", "appWidgetInfo minResizeWidth: " + appWidgetInfo.minResizeHeight);
+	    	Log_d("HMAWM.createWidget", "appWidgetInfo minWidth: " + appWidgetInfo.minWidth);
+	    	Log_d("HMAWM.createWidget", "appWidgetInfo minResizeWidth: " + appWidgetInfo.minResizeWidth);
+	    	Log_d("HMAWM.createWidget", "appWidgetInfo resizeMode: " + appWidgetInfo.resizeMode);
+	    	Log_d("HMAWM.createWidget", "appWidgetInfo updatePeriodMillis: " + appWidgetInfo.updatePeriodMillis);
+	    	Log_d("HMAWM.createWidget", "appWidgetInfo widgetCategory: " + appWidgetInfo.widgetCategory);
 	    }
 	    
 	    //create the hostView - this effectively represents our widget
@@ -209,8 +210,12 @@ public class HMAppWidgetManager {
 		return (widgetsMap.get(widgetType) != null);
 	}
 
+    public static void setDebugMode(boolean debug) {
+        mDebug = debug;
+    }
+
     private void Log_d(String tag, String message) {
-        if (DefaultActivity.isDebug())
+        if (mDebug)
             Log.d(tag, message);
     }
 }
