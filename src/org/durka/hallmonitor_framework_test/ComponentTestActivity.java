@@ -24,7 +24,7 @@ import java.util.TimerTask;
 
 public class ComponentTestActivity extends ComponentFramework.Activity
         implements ComponentFramework.OnScreenOffTimerListener , ComponentFramework.OnWakeUpScreenListener , ComponentFramework.OnKeepOnScreen
-        , ComponentFramework.OnCoverStateChangedListener , ComponentFramework.OnGyroscopeChangedListener {
+        , ComponentFramework.OnCoverStateChangedListener {
 
     private final String LOG_TAG = "ComponentTestActivity";
 
@@ -70,8 +70,6 @@ public class ComponentTestActivity extends ComponentFramework.Activity
         mIsActivityPaused = false;
         onStartScreenOffTimer();
 
-        ViewCoverService.registerOnGyroscopeChangedListener(this);
-
         super.onResume();
     }
 
@@ -79,8 +77,6 @@ public class ComponentTestActivity extends ComponentFramework.Activity
     protected void onPause() {
         Log_d(LOG_TAG, "onPause");
         super.onPause();
-
-        ViewCoverService.unregisterOnGyroscopeChangedListener(this);
 
         onStopScreenOffTimer();
         mIsActivityPaused = true;
@@ -209,14 +205,6 @@ public class ComponentTestActivity extends ComponentFramework.Activity
         } else {
             moveTaskToBack(true);
         }
-    }
-
-    /**
-     * implement OnGyroscopeChangedListener
-     */
-    public void onGyroscopeChanged() {
-        Log_d(LOG_TAG, "onGyroscopeChanged: ");
-        onWakeUpScreen();
     }
 
     /**

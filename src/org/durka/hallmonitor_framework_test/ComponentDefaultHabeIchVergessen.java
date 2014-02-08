@@ -17,7 +17,9 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextClock;
 
-public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout implements ComponentFramework.OnPauseResumeListener, ComponentFramework.MenuController.OnMenuActionListener, NotificationService.OnNotificationChangedListener {
+public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
+        implements ComponentFramework.OnPauseResumeListener, ComponentFramework.MenuController.OnMenuActionListener,
+        NotificationService.OnNotificationChangedListener, ComponentFramework.OnGyroscopeChangedListener {
 
     private final String LOG_TAG = "ComponentDefaultHabeIchVergessen";
 
@@ -110,6 +112,7 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
                 case R.id.torchbutton:
                     // read notifications for torch state
                     option.setImageId(!NotificationService.isTorchOn() ? R.drawable.ic_appwidget_torch_off : R.drawable.ic_appwidget_torch_on);
+
                     break;
             }
         }
@@ -132,7 +135,14 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
                 intent.putExtra("bright", false);
                 ((Activity)getContext()).sendBroadcast(intent);
 
-                menuOption.setImageId((menuOption.getImageId() == R.drawable.ic_appwidget_torch_off ? R.drawable.ic_appwidget_torch_on : R.drawable.ic_appwidget_torch_off));
+                boolean torchOn = (menuOption.getImageId() == R.drawable.ic_appwidget_torch_off);
+
+                menuOption.setImageId((torchOn ? R.drawable.ic_appwidget_torch_on : R.drawable.ic_appwidget_torch_off));
+
+                if (torchOn)
+                    ViewCoverService.registerOnGyroscopeChangedListener(this);
+                else
+                    ViewCoverService.unregisterOnGyroscopeChangedListener(this);
                 break;
             case R.id.menu_phone_ringer_normal:
                 audioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
@@ -195,6 +205,16 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout 
                 });
             }
         }
+    }
+
+    /**
+     * implement OnGyroscopeChangedListener
+     */
+    public void onGyroscopeChanged() {
+        Log_d(LOG_TAG, "onGyroscopeChanged: ");
+
+        if (ComponentFramework.OnWakeUpScreenListener.class.isAssignableFrom(getActivity().getClass()))
+            ((ComponentFramework.OnWakeUpScreenListener)getActivity()).onWakeUpScreen();
     }
 
     private void updateBatteryStatus() {

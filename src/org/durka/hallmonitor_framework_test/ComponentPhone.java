@@ -26,7 +26,9 @@ import android.widget.TextView;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class ComponentPhone extends ComponentFramework.Layout implements ComponentFramework.OnPreviewComponentListener, ComponentFramework.OnPauseResumeListener, ComponentFramework.MenuController.OnMenuActionListener {
+public class ComponentPhone extends ComponentFramework.Layout
+        implements ComponentFramework.OnPreviewComponentListener, ComponentFramework.OnPauseResumeListener,
+        ComponentFramework.MenuController.OnMenuActionListener, ComponentFramework.OnGyroscopeChangedListener {
 
     private final String LOG_TAG = "ComponentPhone";
     private final String mPreviewName = "phoneWidget";
@@ -189,6 +191,25 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
             Log_d(LOG_TAG, "force restart (overdrive telephone manager)");
             forceRestart();
         }
+    }
+
+    /**
+     * implement OnGyroscopeChangedListener
+     */
+    public void onGyroscopeChanged() {
+        Log_d(LOG_TAG, "onGyroscopeChanged: ");
+
+        if (ComponentFramework.OnWakeUpScreenListener.class.isAssignableFrom(getActivity().getClass()))
+            ((ComponentFramework.OnWakeUpScreenListener)getActivity()).onWakeUpScreen();
+    }
+
+    protected void setGyroscopeListener(boolean enabled) {
+        Log_d(LOG_TAG, "setGyroscopeListener: " + enabled);
+
+        if (enabled)
+            ViewCoverService.registerOnGyroscopeChangedListener(this);
+        else
+            ViewCoverService.unregisterOnGyroscopeChangedListener(this);
     }
 
     /**
@@ -644,6 +665,8 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
                         setPhoneShow(false);
                         setVisibility(INVISIBLE);
                     }
+                    
+                    setGyroscopeListener(false);
                     break;
                 case TelephonyManager.CALL_STATE_OFFHOOK:
                     Log_d(LOG_TAG, "onCallStateChanged: off hook");
@@ -655,6 +678,8 @@ public class ComponentPhone extends ComponentFramework.Layout implements Compone
                     setVisibility(VISIBLE);
                     resetPhoneWidgetMakeVisible();
                     setIncomingNumber(incomingNumber);
+
+                    setGyroscopeListener(true);
                     break;
             }
         }
