@@ -665,7 +665,7 @@ public class ComponentPhone extends ComponentFramework.Layout
                         setPhoneShow(false);
                         setVisibility(INVISIBLE);
                     }
-                    
+
                     setGyroscopeListener(false);
                     break;
                 case TelephonyManager.CALL_STATE_OFFHOOK:

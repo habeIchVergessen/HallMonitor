@@ -83,7 +83,7 @@ public class ComponentFramework {
             // propagate to layout's
             if (getContainer() != null) {
                 getContainer().onPause();
-                getContainer().dumpBackStack();
+                Log_d(LOG_TAG, "onPause:\n" + getContainer().dumpBackStack());
             }
         }
 
@@ -98,7 +98,7 @@ public class ComponentFramework {
                 if (debug != mDebug)
                     getContainer().setDebugMode(debug);
 
-                getContainer().dumpBackStack();
+                Log_d(LOG_TAG, "onResume:\n" + getContainer().dumpBackStack());
                 getContainer().onResume();
             }
 
@@ -566,16 +566,20 @@ public class ComponentFramework {
             }
         }
 
-        public void dumpBackStack() {
+        public String dumpBackStack() {
+            String result = "dumpBackStack:\n";
+
             for (Integer key : mBackStack.keySet())
-                Log_d(LOG_TAG, "key: '" + key + "' -> '" + mBackStack.get(key) + "'");
+                result += "key: '" + key + "' -> '" + mBackStack.get(key) + "'\n";
+
+            return result;
         }
 
         @Override
         public void bringChildToFront(View child) {
             if (mLayoutInflated && (child instanceof Layout)) {
                 // child invisible
-                if (!child.isShown())
+                if (child.getVisibility() != VISIBLE)
                     return;
 
                 moveOnTopOfBackStack((Layout)child);
@@ -818,7 +822,7 @@ public class ComponentFramework {
                         }
 
                         // handle default layout visibility
-                        if (mLayoutView.isShown() && getContainer() != null)
+                        if (mLayoutView.getVisibility() == VISIBLE && getContainer() != null)
                             getContainer().bringChildToFront(this);
                     }
                     break;

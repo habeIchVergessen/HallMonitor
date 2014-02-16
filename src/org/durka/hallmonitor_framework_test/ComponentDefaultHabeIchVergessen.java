@@ -46,8 +46,6 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
         mDefaultTextClock.setFormat24Hour(spanString);
 
         mDefaultTextClock.setTextColor(getPrefInt("pref_default_fgcolor", 0xffffffff));
-
-        updateBatteryStatus();
     }
 
     protected boolean onOpenComponent() {
@@ -65,6 +63,8 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
 
         if (NotificationService.registerOnNotificationChangedListener(this))
             onNotificationChanged();
+
+        updateBatteryStatus();
     }
 
     public void onPause() {
@@ -154,7 +154,7 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
                 audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
                 break;
             case R.id.menu_test:
-                getContainer().dumpBackStack();
+                Log_d(LOG_TAG, "onMenuAction:\n" + getContainer().dumpBackStack());
                 break;
         }
     }
