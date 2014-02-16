@@ -19,6 +19,7 @@ import java.io.FileNotFoundException;
 import java.sql.Time;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -54,7 +55,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     private RestartThread restartThread = null;
 
     private ComponentFramework.OnCoverStateChangedListener mOnCoverStateChangedListener = null;
-    private ComponentFramework.OnGyroscopeChangedListener mOnGyroscopeChangedListener = null;
+    private HashMap<String,ComponentFramework.OnGyroscopeChangedListener> mOnGyroscopeChangedListener = new HashMap<String,ComponentFramework.OnGyroscopeChangedListener>();
 
     private static ViewCoverService runningInstance = null;
 	private SensorManager       mSensorManager;
@@ -163,8 +164,9 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
                 final float aZ = event.values[2];
                 final float sensitivity = 3.0f;
 
-                if (Math.abs(aX) >= sensitivity || Math.abs(aZ) >= sensitivity && mOnGyroscopeChangedListener != null) {
-                    mOnGyroscopeChangedListener.onGyroscopeChanged();
+                if (Math.abs(aX) >= sensitivity || Math.abs(aZ) >= sensitivity && mOnGyroscopeChangedListener.size() > 0) {
+                    for (ComponentFramework.OnGyroscopeChangedListener onGyroscopeChangedListener : mOnGyroscopeChangedListener.values())
+                        onGyroscopeChangedListener.onGyroscopeChanged();
                     mLastGyroscopeReported = System.currentTimeMillis();
                 }
             }
@@ -339,15 +341,29 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     }
 
     private synchronized void registerOnGyroscopeChangedListenerPrivate(ComponentFramework.OnGyroscopeChangedListener onGyroscopeChangedListener) {
-        if (mOnGyroscopeChangedListener == null)
+        if (mOnGyroscopeChangedListener.containsKey(onGyroscopeChangedListener.getClass().getName()))
+            mOnGyroscopeChangedListener.remove(onGyroscopeChangedListener.getClass().getName());
+
+        mOnGyroscopeChangedListener.put(onGyroscopeChangedListener.getClass().getName(), onGyroscopeChangedListener);
+
+        Log_d(LOG_TAG, "registerOnGyroscopeChangedListenerPrivate: " + onGyroscopeChangedListener.getClass().getName() + ", " + mOnGyroscopeChangedListener.size());
+
+        // start gyroscope sensor
+        if (mOnGyroscopeChangedListener.size() == 1) {
+            Log_d(LOG_TAG, "registerOnGyroscopeChangedListenerPrivate: start gyroscope sensor");
             mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_UI);
-        mOnGyroscopeChangedListener = onGyroscopeChangedListener;
+        }
     }
 
     private synchronized void unregisterOnGyroscopeChangedListenerPrivate(ComponentFramework.OnGyroscopeChangedListener onGyroscopeChangedListener) {
-        if (mOnGyroscopeChangedListener == onGyroscopeChangedListener) {
+        boolean removed = (mOnGyroscopeChangedListener.remove(onGyroscopeChangedListener.getClass().getName()) != null);
+
+        Log_d(LOG_TAG, "unregisterOnGyroscopeChangedListenerPrivate: " + removed + ", " + mOnGyroscopeChangedListener.size());
+
+        // stop gyroscope sensor
+        if (mOnGyroscopeChangedListener.size() == 0) {
+            Log_d(LOG_TAG, "unregisterOnGyroscopeChangedListenerPrivate: stop gyroscope sensor");
             mSensorManager.unregisterListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE));
-            mOnGyroscopeChangedListener = null;
         }
     }
 
