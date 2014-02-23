@@ -165,8 +165,14 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
                 final float sensitivity = 3.0f;
 
                 if (Math.abs(aX) >= sensitivity || Math.abs(aZ) >= sensitivity && mOnGyroscopeChangedListener.size() > 0) {
-                    for (ComponentFramework.OnGyroscopeChangedListener onGyroscopeChangedListener : mOnGyroscopeChangedListener.values())
-                        onGyroscopeChangedListener.onGyroscopeChanged();
+                    for (ComponentFramework.OnGyroscopeChangedListener onGyroscopeChangedListener : mOnGyroscopeChangedListener.values()) {
+                        try {
+                            onGyroscopeChangedListener.onGyroscopeChanged();
+                        } catch (Exception e) {
+                            Log_d(LOG_TAG, "onSensorChanged: TYPE_GYROSCOPE, exception occurred! " + e.getMessage());
+                            unregisterOnGyroscopeChangedListenerPrivate(onGyroscopeChangedListener);
+                        }
+                    }
                     mLastGyroscopeReported = System.currentTimeMillis();
                 }
             }

@@ -54,7 +54,6 @@
         android:choiceMode="none"
         android:layout_marginTop="10dp"
         android:scrollbars="none"
-        android:columnWidth="24dp"
         android:padding="0dp"
         android:layout_gravity="center"
         android:gravity="center"

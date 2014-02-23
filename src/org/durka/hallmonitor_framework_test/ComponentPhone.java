@@ -100,7 +100,7 @@ public class ComponentPhone extends ComponentFramework.Layout
             return true;
         }
 
-        stopScreenOffTimer();
+        //stopScreenOffTimer();
 
         return true;
     }
@@ -111,7 +111,7 @@ public class ComponentPhone extends ComponentFramework.Layout
         if (!isPhoneShow() && mPreviewMode)
             return;
 
-        startScreenOffTimer();
+        //startScreenOffTimer();
     }
 
     /**
@@ -252,7 +252,7 @@ public class ComponentPhone extends ComponentFramework.Layout
                 final String incomingNumber = getIncomingNumber();
 
                 Log_d(LOG_TAG, "initPhoneWidget: number = '" + incomingNumber + "'");
-                getContainer().getApplicationState().putBoolean(INTENT_phoneWidgetShow, true);
+                setPhoneShow(true);
                 getContainer().getApplicationState().putString(INTENT_phoneWidgetIncomingNumber, incomingNumber);
                 setVisibility(VISIBLE);
                 resetPhoneWidgetMakeVisible();
@@ -261,6 +261,7 @@ public class ComponentPhone extends ComponentFramework.Layout
                 if (callState == TelephonyManager.CALL_STATE_OFFHOOK) {
                     callAcceptedPhoneWidget(false);
                     setPhoneInitialized(true);
+                    setGyroscopeListener(true);
                 }
             }
         }
