@@ -204,6 +204,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity
                 onKeepOnScreen(getContainer().getApplicationState());
         } else {
             moveTaskToBack(true);
+            finish();
         }
     }
 
