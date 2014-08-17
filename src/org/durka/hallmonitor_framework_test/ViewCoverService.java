@@ -42,7 +42,6 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.WindowManager;
 
-
 public class ViewCoverService extends Service implements SensorEventListener, TextToSpeech.OnInitListener {
 
     private final static String LOG_TAG = "VCS";
@@ -64,6 +63,12 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 
     private static boolean mDebug = false;
 
+    private final static String ACTION_LID_STATE_CHANGED = "android.intent.action.LID_STATE_CHANGED";
+    private final static String EXTRA_LID_STATE = "state";
+
+    private static final int LID_ABSENT = -1;
+    private static final int LID_CLOSED = 0;
+    private static final int LID_OPEN = 1;
     /**
      *  Text-To-Speech
      */
@@ -93,6 +98,18 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
                 intent.getExtras().remove("restartDelay");
 
                 restartFrameworkTest(intent.getExtras(), delay);
+            } else if (action.equals(ACTION_LID_STATE_CHANGED)) {
+                switch (intent.getIntExtra(EXTRA_LID_STATE, LID_ABSENT)) {
+                    case LID_CLOSED:
+                        Log_d(LOG_TAG, "onReceive: ACTION_LID_STATE_CHANGED: closed");
+                        break;
+                    case LID_OPEN:
+                        Log_d(LOG_TAG, "onReceive: ACTION_LID_STATE_CHANGED: opened");
+                        break;
+                    default:
+                        Log_d(LOG_TAG, "onReceive: ACTION_LID_STATE_CHANGED: unknown");
+                        break;
+                }
             }
         }
     };

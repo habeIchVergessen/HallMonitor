@@ -63,6 +63,7 @@
                 <action android:name="org.durka.hallmonitor.stopTextToSpeech" />
                 <action android:name="org.durka.hallmonitor.restartDefaultActivity" />
                 <action android:name="org.durka.hallmonitor.restartFrameworkTest" />
+                <action android:name="android.intent.action.LID_STATE_CHANGED" />
             </intent-filter>
         </service>
 

@@ -232,7 +232,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity
                     else
                         onStartScreenOffTimer();
                 } else {
-                    moveTaskToBack(true);
+                    onCoverStateChanged(false);
                 }
             } else if (action.equals(TelephonyManager.ACTION_PHONE_STATE_CHANGED)) {
                 String phoneExtraState = intent.getStringExtra(TelephonyManager.EXTRA_STATE);

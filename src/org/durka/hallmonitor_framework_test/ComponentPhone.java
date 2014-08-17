@@ -516,7 +516,7 @@ public class ComponentPhone extends ComponentFramework.Layout
         pointerCoords.setAxisValue(MotionEvent.AXIS_X, pointerCoords.x + containerOffset.left);
         pointerCoords.setAxisValue(MotionEvent.AXIS_Y, pointerCoords.y + containerOffset.top);
 
-//        Log_d(LOG_TAG, "onTouchEvent: " + actionMasked + ", " + pointerCoords.x + ":" + pointerCoords.y);
+        Log_d(LOG_TAG, "onTouchEvent: " + actionMasked + ", " + pointerCoords.x + ":" + pointerCoords.y);
         switch (actionMasked) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
