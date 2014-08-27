@@ -132,6 +132,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
         filter.addAction(getString(R.string.ACTION_STOP_TO_SPEECH_RECEIVE));
         filter.addAction(getString(R.string.ACTION_RESTART_DEFAULT_ACTIVITY));
         filter.addAction(getString(R.string.ACTION_RESTART_FRAMEWORK_TEST));
+        filter.addAction(ACTION_LID_STATE_CHANGED);
         registerReceiver(receiver, filter);
 
         runningInstance = this;
