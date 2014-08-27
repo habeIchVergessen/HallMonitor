@@ -63,6 +63,8 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 
     private static boolean mDebug = false;
 
+    private boolean mLidStateChangedDetected = false;
+
     private final static String ACTION_LID_STATE_CHANGED = "android.intent.action.LID_STATE_CHANGED";
     private final static String EXTRA_LID_STATE = "state";
 
@@ -99,15 +101,25 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 
                 restartFrameworkTest(intent.getExtras(), delay);
             } else if (action.equals(ACTION_LID_STATE_CHANGED)) {
-                switch (intent.getIntExtra(EXTRA_LID_STATE, LID_ABSENT)) {
+                int extra = intent.getIntExtra(EXTRA_LID_STATE, LID_ABSENT);
+
+                Log_d(LOG_TAG, "onReceive: ACTION_LID_STATE_CHANGED: " + extra);
+                switch (extra) {
                     case LID_CLOSED:
-                        Log_d(LOG_TAG, "onReceive: ACTION_LID_STATE_CHANGED: closed");
-                        break;
                     case LID_OPEN:
-                        Log_d(LOG_TAG, "onReceive: ACTION_LID_STATE_CHANGED: opened");
+                        boolean isClosed = (extra == LID_CLOSED);
+
+                        if (!mLidStateChangedDetected) {
+                            mLidStateChangedDetected = true;
+
+                            Log_d(LOG_TAG, "onReceive: ACTION_LID_STATE_CHANGED: disable proximity");
+                            mSensorManager.unregisterListener(runningInstance, mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY));
+                        }
+
+                        if (globalCoverState != isClosed)
+                            onCoverStateChanged(isClosed);
                         break;
                     default:
-                        Log_d(LOG_TAG, "onReceive: ACTION_LID_STATE_CHANGED: unknown");
                         break;
                 }
             }
@@ -120,7 +132,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 		Log_d(LOG_TAG + ".onStartCommand", "View cover service started");
 
 		mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-		
+
 		mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY), SensorManager.SENSOR_DELAY_UI);
 
         // Text-To-Speech
@@ -338,16 +350,19 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     private synchronized boolean isCoverClosedPrivate() {
         boolean result = false;
 
-        String status = "";
-        try {
-            Scanner sc = new Scanner(new File(hallFileName));
-            status = sc.nextLine();
-            sc.close();
-        } catch (FileNotFoundException e) {
-            Log.e(LOG_TAG, "Hall effect sensor device file not found!");
-        }
+        if (!mLidStateChangedDetected) {
+            String status = "";
+            try {
+                Scanner sc = new Scanner(new File(hallFileName));
+                status = sc.nextLine();
+                sc.close();
+            } catch (FileNotFoundException e) {
+                Log.e(LOG_TAG, "Hall effect sensor device file not found!");
+            }
 
-        result = (status.compareTo("CLOSE") == 0);
+            result = (status.compareTo("CLOSE") == 0);
+        } else
+            result = globalCoverState;
 
         return result;
     }

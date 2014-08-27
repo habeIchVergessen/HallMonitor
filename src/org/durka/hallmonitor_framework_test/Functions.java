@@ -68,6 +68,9 @@ public class Functions {
 
     private static final String DEV_SERRANO_LTE_CM10 = "serranolte";    // GT-I9195 CM10.x
     private static final String DEV_SERRANO_LTE_CM11 = "serranoltexx";  // GT-I9195 CM11.x
+    private static final String DEV_SERRANO_3G_CM11 = "serrano3gxx";    // GT-I9190 CM11.x
+    private static final String DEV_SERRANO_DS_CM10 = "serranods";	    // GT-I9192 CM10.x
+    private static final String DEV_SERRANO_DS_CM11 = "serranodsxx";    // GT-I9192 CM11.x
 
 	//Class that handles interaction with 3rd party App Widgets
 	public static final HMAppWidgetManager hmAppWidgetManager = new HMAppWidgetManager();
@@ -95,7 +98,10 @@ public class Functions {
                 if (coverMode) {
                     Log_d(LOG_TAG + "setTouchScreenCoverMode", "We're root enabled so lets boost the sensitivity... (Build.Device: '" + Build.DEVICE + "')");
 
-                    if (Build.DEVICE.equals(DEV_SERRANO_LTE_CM10) || Build.DEVICE.equals(DEV_SERRANO_LTE_CM11)) {
+                    if (Build.DEVICE.equals(DEV_SERRANO_LTE_CM10) || Build.DEVICE.equals(DEV_SERRANO_LTE_CM11) ||
+                        Build.DEVICE.equals(DEV_SERRANO_DS_CM10) || Build.DEVICE.equals(DEV_SERRANO_DS_CM11) ||
+                        Build.DEVICE.equals(DEV_SERRANO_3G_CM11)
+                    ) {
                         run_commands_as_root(new String[]{
                             "echo module_on_master > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result"
                         ,   "echo clear_cover_mode,3 > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result"}
@@ -107,7 +113,10 @@ public class Functions {
                 } else {
                     Log_d(LOG_TAG + "setTouchScreenCoverMode", "We're root enabled so lets revert the sensitivity...");
 
-                    if (Build.DEVICE.equals(DEV_SERRANO_LTE_CM10) || Build.DEVICE.equals(DEV_SERRANO_LTE_CM11)) {
+                    if (Build.DEVICE.equals(DEV_SERRANO_LTE_CM10) || Build.DEVICE.equals(DEV_SERRANO_LTE_CM11) ||
+                        Build.DEVICE.equals(DEV_SERRANO_DS_CM10) || Build.DEVICE.equals(DEV_SERRANO_DS_CM11) ||
+                        Build.DEVICE.equals(DEV_SERRANO_3G_CM11)
+                    ) {
                         run_commands_as_root(new String[]{
                             "echo module_on_master > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result"
                         ,   "echo clear_cover_mode,0 > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result"}

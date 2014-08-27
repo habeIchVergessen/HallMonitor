@@ -48,7 +48,8 @@
             android:label="Hallmonitor (Framework Test)"
             android:name="org.durka.hallmonitor_framework_test.ComponentTestPreferences"
             android:configChanges="orientation|keyboardHidden|screenSize"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -101,7 +102,8 @@
             android:noHistory="true"
             android:screenOrientation="portrait"
             android:launchMode="singleTask"
-            android:theme="@style/FullscreenTheme">
+            android:theme="@style/FullscreenTheme"
+            android:excludeFromRecents="true">
             <intent-filter>
                 <action android:name="android.intent.action.HEADSET_PLUG" />
             </intent-filter>
