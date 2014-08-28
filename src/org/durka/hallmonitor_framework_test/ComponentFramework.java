@@ -452,8 +452,7 @@ public class ComponentFramework {
 
                 if (Layout.class.isAssignableFrom(loadClass)) {
                     Constructor<?> loadConstructor = loadClass.getConstructor(Context.class, AttributeSet.class);
-                    Layout loadLayout = (Layout)loadConstructor.newInstance(mContext, mAttributeSet);
-                    result = loadLayout;
+                    result = (Layout)loadConstructor.newInstance(mContext, mAttributeSet);
                 }
             } catch (Exception e) {
                 Log_d(LOG_TAG, "loading class: exception occurred " + e.getMessage());
@@ -805,7 +804,7 @@ public class ComponentFramework {
         }
 
         @Override
-        final synchronized public void setVisibility(int visibility) {
+        final public void setVisibility(int visibility) {
             Log_d(LOG_TAG, "setVisibility");
             switch (visibility) {
                 case VISIBLE:
@@ -915,7 +914,7 @@ public class ComponentFramework {
          * <br/>
          * @return result from activity method call or false if activity doesn't implement the listener
          */
-        protected synchronized boolean startScreenOffTimer() {
+        protected boolean startScreenOffTimer() {
             boolean result = false;
 
             if (getActivity() != null) {
@@ -933,7 +932,7 @@ public class ComponentFramework {
          * <br/>
          * @return result from activity method call or false if activity doesn't implement the listener
          */
-        protected synchronized boolean stopScreenOffTimer() {
+        protected boolean stopScreenOffTimer() {
             boolean result = false;
 
             if (getActivity() != null) {
@@ -1529,7 +1528,7 @@ public class ComponentFramework {
 
                 PointF viewCenterTop = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, 0f, radius);
                 PointF viewLeftTop = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)arcMatch, radius + snap);
-                PointF viewRightTop = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)-arcMatch, radius + snap);
+//                PointF viewRightTop = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)-arcMatch, radius + snap);
                 // circular segment
 //            PointF viewLeftBottom = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)arcMatch, -radius);
 //            PointF viewRightBottom = OptionMenuHelper.movePointOnCircularSegment(drawCenter, viewCenter, (float)-arcMatch, -radius);

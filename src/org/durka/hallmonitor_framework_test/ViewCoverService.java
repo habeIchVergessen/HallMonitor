@@ -138,6 +138,9 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
         // Text-To-Speech
         initTextToSpeech();
 
+        runningInstance = this;
+        globalCoverState = isCoverClosedPrivate();
+
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_HEADSET_PLUG);
         filter.addAction(getString(R.string.ACTION_SEND_TO_SPEECH_RECEIVE));
@@ -147,8 +150,6 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
         filter.addAction(ACTION_LID_STATE_CHANGED);
         registerReceiver(receiver, filter);
 
-        runningInstance = this;
-        globalCoverState = isCoverClosedPrivate();
         mLastGyroscopeReported = System.currentTimeMillis();
 
         return START_STICKY;
@@ -347,7 +348,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
         }
     }
 
-    private synchronized boolean isCoverClosedPrivate() {
+    private boolean isCoverClosedPrivate() {
         boolean result = false;
 
         if (!mLidStateChangedDetected) {

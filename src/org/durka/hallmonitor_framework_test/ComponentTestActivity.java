@@ -47,6 +47,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity
             getMenuController().registerOnOpenListener(getContainer());
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
 
         // register receivers
         IntentFilter intentFilter = new IntentFilter();
