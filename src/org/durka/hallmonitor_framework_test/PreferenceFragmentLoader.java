@@ -152,7 +152,7 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
         // phone control
         enablePhoneScreen(prefs);
         updatePhoneControlTtsDelay(prefs);
-        
+        updateDefaultView(prefs);
     }
 
     @Override
@@ -239,9 +239,12 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
                         prefs.edit().putBoolean(key, false).commit();
                     }
                 }
-            // preferences_phone
+        // preferences_phone
         } else if (key.equals("pref_phone_controls_tts_delay")) {
             updatePhoneControlTtsDelay(prefs);
+        // preferences_widget
+        } else if (key.equals("prefDefaultLayoutClassName")) {
+            updateDefaultView(prefs);
         }
 
         // phone control
@@ -250,6 +253,14 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
 
     private void updatePhoneControlTtsDelay(SharedPreferences prefs) {
         Preference preference = findPreference("pref_phone_controls_tts_delay");
+
+        if (preference != null && (preference instanceof ListPreference)) {
+            preference.setSummary(((ListPreference)preference).getEntry());
+        }
+    }
+
+    private void updateDefaultView(SharedPreferences prefs) {
+        Preference preference = findPreference("prefDefaultLayoutClassName");
 
         if (preference != null && (preference instanceof ListPreference)) {
             preference.setSummary(((ListPreference)preference).getEntry());

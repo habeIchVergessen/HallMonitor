@@ -27,7 +27,7 @@
 		android:id="@id/color_picker_view"
 		android:layout_alignParentTop="true"
 		android:layout_centerHorizontal="true"
-		style="@style/dialog_color_pciker_view_portrait"
+		style="@style/dialog_color_picker_view_portrait"
 	/>
 		
 	<LinearLayout

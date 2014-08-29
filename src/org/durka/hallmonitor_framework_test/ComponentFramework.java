@@ -77,6 +77,13 @@ public class ComponentFramework {
         public abstract MenuController getMenuController();
 
         @Override
+        protected void onCreate(Bundle saveInstanceState) {
+            super.onCreate(saveInstanceState);
+
+            mDebug = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_dev_opts_debug", false);
+        }
+
+        @Override
         protected void onPause() {
             super.onPause();
 
@@ -277,12 +284,14 @@ public class ComponentFramework {
             super(context);
 
             mContext = context;
+            setDebugMode();
         }
 
         public Child(Context context, AttributeSet attributeSet) {
             super(context, attributeSet);
 
             mContext = context;
+            setDebugMode();
             loadStyledAttrs(attributeSet);
         }
 
@@ -290,6 +299,7 @@ public class ComponentFramework {
             super(context, attributeSet, defStyle);
 
             mContext = context;
+            setDebugMode();
             loadStyledAttrs(attributeSet);
         }
 
@@ -301,20 +311,25 @@ public class ComponentFramework {
 
             TypedArray styledAttrs = getContext().obtainStyledAttributes(mAttributeSet, R.styleable.ComponentStyleable);
 
+            if (styledAttrs == null)
+                return;
+
             // reading parameter debugMode
             setDebugMode(styledAttrs.getBoolean(R.styleable.ComponentStyleable_debugMode, false));
 
             // reading parameter defaultLayoutResourceId
-            try {
-                if (styledAttrs != null) {
-                    int resId = styledAttrs.getResourceId(R.styleable.ComponentStyleable_defaultLayoutResourceId, UNDEFINED_LAYOUT);
-                    mLayoutResName = getResources().getResourceName(resId);
-                    mLayoutResId = resId;
-                }
-            } catch (Exception e) {
+            int resId = styledAttrs.getResourceId(R.styleable.ComponentStyleable_defaultLayoutResourceId, UNDEFINED_LAYOUT);
+            if (resId != UNDEFINED_LAYOUT){
+                mLayoutResName = getResources().getResourceName(resId);
+                mLayoutResId = resId;
             }
 
             mLayoutClassName = styledAttrs.getString(R.styleable.ComponentStyleable_defaultLayoutClassName);
+        }
+
+        private void setDebugMode() {
+            if (!isInEditMode())
+                setDebugMode(PreferenceManager.getDefaultSharedPreferences(mContext).getBoolean("pref_dev_opts_debug", false));
         }
 
         public void setDebugMode(boolean debugMode) {
