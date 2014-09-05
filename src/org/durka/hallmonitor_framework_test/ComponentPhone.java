@@ -10,12 +10,15 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.provider.ContactsContract;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -475,14 +478,26 @@ public class ComponentPhone extends ComponentFramework.Layout
 
     private void sendHangUp() {
         Log_d(LOG_TAG, "sendHangUp: ");
-        if (!mPreviewMode)
-            Functions.Actions.hangup_call();
+        sendKeyHeadSetHook(true);
     }
 
     private void sendPickUp() {
         Log_d(LOG_TAG, "sendPickUp: ");
-        if (!mPreviewMode)
-            Functions.Actions.pickup_call();
+        sendKeyHeadSetHook(false);
+    }
+
+    private void sendKeyHeadSetHook(boolean longPress) {
+        if (mPreviewMode)
+            return;
+
+        Intent intent = new Intent(Intent.ACTION_MEDIA_BUTTON);
+        KeyEvent keyEvent = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_HEADSETHOOK);
+
+        if (longPress)
+            keyEvent = KeyEvent.changeFlags(keyEvent, keyEvent.getFlags() | KeyEvent.FLAG_LONG_PRESS);
+
+        intent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
+        getContext().sendOrderedBroadcast(intent, null);
     }
 
     /**

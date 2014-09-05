@@ -204,7 +204,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity
             if (mIsActivityPaused)
                 onKeepOnScreen(getContainer().getApplicationState());
         } else {
-            finish();   // moveTaskToBack(true);
+            finish();   //moveTaskToBack(true);
         }
     }
 

@@ -336,35 +336,6 @@ public class Functions {
             return result;
 		}
 
-
-		public static void hangup_call() {
-			Log_d("phone", "hanging up! goodbye");
-			run_commands_as_root(new String[]{"input keyevent 6"}, false);
-		}
-		
-		public static void pickup_call() {
-			Log_d("phone", "picking up! hello");
-			run_commands_as_root(new String[]{"input keyevent 5"}, false);
-		}
-		
-		public static void debug_notification(Context ctx, boolean showhide) {
-			if (showhide) {
-				Notification.Builder mBuilder =
-				        new Notification.Builder(ctx)
-				        .setSmallIcon(R.drawable.ic_launcher)
-				        .setContentTitle("Hall Monitor")
-				        .setContentText("Debugging is fun!");
-
-				NotificationManager mNotificationManager =
-				    (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-				mNotificationManager.notify(42, mBuilder.build());
-			} else {
-				NotificationManager mNotificationManager =
-					    (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-					mNotificationManager.cancel(42);
-			}
-		}
-
         private static void Log_d(String tag, String msg) {
             if (mDebug)
                 Log.d(tag, msg);

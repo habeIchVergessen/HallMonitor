@@ -40,6 +40,7 @@ import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.WindowManager;
 
 public class ViewCoverService extends Service implements SensorEventListener, TextToSpeech.OnInitListener {
@@ -421,7 +422,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
         Log_d(LOG_TAG, "restartFrameworkTest: " + extras);
 
         Intent start = new Intent(getBaseContext(), ComponentTestActivity.class);
-        start.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+        start.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
         start.setAction(Intent.ACTION_MAIN);
         // restore extras from previously running task
         if (extras != null)
@@ -473,7 +474,6 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
         if (runningInstance != null)
             runningInstance.unregisterOnGyroscopeChangedListenerPrivate(onGyroscopeChangedListener);
     }
-
 
     public static void setDebugMode(boolean debug) {
         mDebug = debug;
