@@ -98,12 +98,8 @@ public class ComponentPhone extends ComponentFramework.Layout
 
         int bgColor = getPrefInt("pref_default_bgcolor", 0xff000000);
 
-        if (!isPhoneShow() && mPreviewMode) {
+        if (!isPhoneShow() && mPreviewMode)
             preview();
-            return true;
-        }
-
-        //stopScreenOffTimer();
 
         return true;
     }
@@ -111,10 +107,8 @@ public class ComponentPhone extends ComponentFramework.Layout
     protected void onCloseComponent() {
         Log_d(LOG_TAG, "onCloseComponent");
 
-        if (!isPhoneShow() && mPreviewMode)
-            return;
-
-        //startScreenOffTimer();
+        if (mPreviewMode)
+            getActivity().finish();
     }
 
     /**
@@ -147,17 +141,15 @@ public class ComponentPhone extends ComponentFramework.Layout
                 String value = input.getText().toString();
                 Log_d(LOG_TAG, "preview: value = '" + value + "'");
 
-                resetPhoneWidgetMakeVisible();
+                //resetPhoneWidgetMakeVisible();
                 setIncomingNumber(value);
             }
         });
 
         alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
-                if (getContainer().getPreviewMode().equals(mPreviewName))
-                    getActivity().finish();
-                else
-                    setVisibility(INVISIBLE);
+                Log_d(LOG_TAG, "preview: cancel = '" + getContainer().getPreviewMode() + "'");
+                setVisibility(INVISIBLE);
             }
         });
 
@@ -178,7 +170,7 @@ public class ComponentPhone extends ComponentFramework.Layout
     public void onResume() {
         Log_d(LOG_TAG, "onResume");
 
-        TelephonyManager telephonyManager = (TelephonyManager)getContext().getSystemService(getActivity().TELEPHONY_SERVICE);
+        TelephonyManager telephonyManager = (TelephonyManager) getContext().getSystemService(getActivity().TELEPHONY_SERVICE);
         telephonyManager.listen(mImplPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE | PhoneStateListener.LISTEN_CALL_FORWARDING_INDICATOR);
 
         initPhoneWidget();
@@ -187,7 +179,7 @@ public class ComponentPhone extends ComponentFramework.Layout
     public void onPause() {
         Log_d(LOG_TAG, "onPause");
 
-        TelephonyManager telephonyManager = (TelephonyManager)getContext().getSystemService(getActivity().TELEPHONY_SERVICE);
+        TelephonyManager telephonyManager = (TelephonyManager) getContext().getSystemService(getActivity().TELEPHONY_SERVICE);
         telephonyManager.listen(mImplPhoneStateListener, PhoneStateListener.LISTEN_NONE);
 
         if (isPhoneShow() && ViewCoverService.isCoverClosed()) {
@@ -405,12 +397,6 @@ public class ComponentPhone extends ComponentFramework.Layout
 
         stopTextToSpeech();
         resetPhoneWidgetMakeVisible();
-
-        // preview
-        if (mPreviewMode) {
-            preview();
-            return;
-        }
 
         if (needsSendHangup)
             sendHangUp();
@@ -674,6 +660,9 @@ public class ComponentPhone extends ComponentFramework.Layout
 
         @Override
         public void onCallStateChanged(int state, String incomingNumber) {
+            if (mPreviewMode)
+                return;
+
             switch (state) {
                 case TelephonyManager.CALL_STATE_IDLE:
                     Log_d(LOG_TAG, "onCallStateChanged: idle");
