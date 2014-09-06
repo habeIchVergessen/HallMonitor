@@ -31,6 +31,17 @@ import java.util.Set;
 
 public class ComponentFramework {
 
+    public static boolean isCyanogenMod() {
+        boolean result = false;
+
+        String version = System.getProperty("os.version");
+        if (version.contains("cyanogenmod")) {
+            result = true;
+        }
+
+        return result;
+    }
+
     public interface OnPauseResumeListener {
         public void onPause();
         public void onResume();

@@ -490,11 +490,12 @@ public class ComponentPhone extends ComponentFramework.Layout
         if (mPreviewMode)
             return;
 
+        long millis = System.currentTimeMillis();
         Intent intent = new Intent(Intent.ACTION_MEDIA_BUTTON);
         KeyEvent keyEvent = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_HEADSETHOOK);
 
         if (longPress)
-            keyEvent = KeyEvent.changeFlags(keyEvent, keyEvent.getFlags() | KeyEvent.FLAG_LONG_PRESS);
+            keyEvent = KeyEvent.changeTimeRepeat(keyEvent, System.currentTimeMillis(), 1, KeyEvent.FLAG_LONG_PRESS);
 
         intent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
         getContext().sendOrderedBroadcast(intent, null);
@@ -686,8 +687,10 @@ public class ComponentPhone extends ComponentFramework.Layout
                     break;
                 case TelephonyManager.CALL_STATE_OFFHOOK:
                     Log_d(LOG_TAG, "onCallStateChanged: off hook");
-                    if (getVisibility() == VISIBLE)
+                    if (getVisibility() == VISIBLE) {
+                        callAcceptedPhoneWidget(false);
                         break;
+                    }
                 case TelephonyManager.CALL_STATE_RINGING:
                     Log_d(LOG_TAG, "onCallStateChanged: ringing");
                     setPhoneShow(true);
