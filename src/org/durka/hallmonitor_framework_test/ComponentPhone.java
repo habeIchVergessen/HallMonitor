@@ -107,8 +107,10 @@ public class ComponentPhone extends ComponentFramework.Layout
     protected void onCloseComponent() {
         Log_d(LOG_TAG, "onCloseComponent");
 
-        if (mPreviewMode)
+        if (mPreviewMode) {
+            setGyroscopeListener(false);
             getActivity().finish();
+        }
     }
 
     /**
