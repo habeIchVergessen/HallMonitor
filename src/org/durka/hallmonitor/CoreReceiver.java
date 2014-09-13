@@ -87,8 +87,8 @@ public class CoreReceiver extends BroadcastReceiver {
 			}
 
 		} else if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
-			mStateManager.freeDevice();
-
+			Log.d(LOG_TAG + ".onReceive", "ACTION_SCREEN_OFF: mStateManager.freeDevice() doesn't work properly here!");
+            mStateManager.setBlackScreenTime(0);    //mStateManager.freeDevice();
 		} else if (intent.getAction().equals(Intent.ACTION_POWER_CONNECTED)) {
 			Intent batteryDAIntent = new Intent(
 					CoreApp.DA_ACTION_BATTERY_REFRESH);

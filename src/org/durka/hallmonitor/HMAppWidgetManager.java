@@ -115,6 +115,11 @@ public class HMAppWidgetManager {
 		AppWidgetProviderInfo appWidgetInfo = mAppWidgetManager
 				.getAppWidgetInfo(appWidgetId);
 
+        if (mStateManager.getCoverClosed()) {
+            Log.d(LOG_TAG + ".configureWidget", "needs to be worked out! doesn't work properly!");
+            return;
+        }
+
 		// check if we need to configure
 		if (appWidgetInfo.configure != null) {
 
