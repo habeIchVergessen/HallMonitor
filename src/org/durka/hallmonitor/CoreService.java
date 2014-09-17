@@ -17,6 +17,7 @@ package org.durka.hallmonitor;
 import android.app.ActivityManager;
 import android.app.Service;
 import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
@@ -161,12 +162,12 @@ public class CoreService extends Service {
 				if (enable) {
 					Log.d(LOG_TAG + ".enableCoverTouch",
 							"We're root enabled so lets boost the sensitivity...");
-					if (Build.DEVICE.equals(CoreApp.DEV_SERRANO_LTE_CM10)
-							|| Build.DEVICE
-									.equals(CoreApp.DEV_SERRANO_LTE_CM11)
-							|| Build.DEVICE.equals(CoreApp.DEV_SERRANO_DS_CM10)
-							|| Build.DEVICE.equals(CoreApp.DEV_SERRANO_DS_CM11)
-							|| Build.DEVICE.equals(CoreApp.DEV_SERRANO_3G_CM11)) {
+					if (Build.DEVICE.equals(CoreApp.DEV_SERRANO_LTE_CM10) ||
+						Build.DEVICE.equals(CoreApp.DEV_SERRANO_LTE_CM11) ||
+						Build.DEVICE.equals(CoreApp.DEV_SERRANO_DS_CM10) ||
+						Build.DEVICE.equals(CoreApp.DEV_SERRANO_DS_CM11) ||
+						Build.DEVICE.equals(CoreApp.DEV_SERRANO_3G_CM11)
+                    ) {
 						Shell.SU.run(new String[] {
 								"echo module_on_master > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result",
 								"echo clear_cover_mode,3 > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result" });
@@ -182,7 +183,9 @@ public class CoreService extends Service {
 					Log.d(LOG_TAG + ".enableCoverTouch",
 							"...Sensitivity reverted, sanity is restored!");
 				}
-			}
+			} else
+                Log.d(LOG_TAG + ".enableCoverTouch",
+                        "We're root disabled. boost the sensitivity is impossible");
 		}
 	}
 
@@ -423,8 +426,15 @@ public class CoreService extends Service {
 				if (mStateManager.getLockMode()) {
 					final DevicePolicyManager dpm = (DevicePolicyManager) ctx
 							.getSystemService(Context.DEVICE_POLICY_SERVICE);
-					Log.d(LOG_TAG + ".lBS", "Lock now.");
-					dpm.lockNow();
+
+                    ComponentName me = new ComponentName(ctx, AdminReceiver.class);
+                    if (!dpm.isAdminActive(me)) {
+                        // if we're not an admin, we can't do anything
+                        Log.d(LOG_TAG + ".lBS", "We are not an admin so cannot do anything.");
+                    } else {
+                        Log.d(LOG_TAG + ".lBS", "Lock now.");
+                        dpm.lockNow();
+                    }
 				} else if (mStateManager.getOsPowerManagement()) {
 					Log.d(LOG_TAG + ".lBS", "OS must manage screen off.");
 				} else if (mStateManager.getSystemApp()) {
