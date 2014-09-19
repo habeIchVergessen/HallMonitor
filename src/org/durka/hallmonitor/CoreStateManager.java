@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningServiceInfo;
@@ -37,6 +38,7 @@ import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.media.AudioManager;
 import android.os.AsyncTask;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
@@ -47,7 +49,8 @@ import eu.chainfire.libsuperuser.Shell;
 public class CoreStateManager {
 	private final String LOG_TAG = "Hall.CSM";
 
-	private final Context mAppContext;
+	private static Context mAppContext;
+	private static boolean init = false;
 
 	// All we need for alternative torch
 	private Camera camera;
@@ -64,8 +67,9 @@ public class CoreStateManager {
 
 	private final boolean systemApp;
 	private boolean adminApp;
-	private final boolean rootApp;
+	private boolean rootApp;
 	private boolean osPowerManagement;
+	private boolean internalPowerManagement;
 	private final boolean hardwareAccelerated;
 
 	// audio manager to detect media state
@@ -86,6 +90,7 @@ public class CoreStateManager {
 	private boolean forceCheckCoverState = false;
 
 	private boolean mainLaunched = false;
+	private boolean defaultActivityStarting = false;
 
 	private CoreReceiver mCoreReceiver;
 
@@ -93,8 +98,14 @@ public class CoreStateManager {
 
 	private String actionCover = CoreReceiver.ACTION_LID_STATE_CHANGED;
 
+	private final PowerManager mPowerManager;
+
+	private static AtomicInteger idCounter = new AtomicInteger();
+
 	CoreStateManager(Context context) {
 		mAppContext = context;
+		mPowerManager = (PowerManager) mAppContext
+				.getSystemService(Context.POWER_SERVICE);
 
 		preference_all = PreferenceManager
 				.getDefaultSharedPreferences(mAppContext);
@@ -102,60 +113,23 @@ public class CoreStateManager {
 		// Enable access to sleep mode
 		systemApp = (mAppContext.getApplicationInfo().flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
 		if (systemApp) {
-			Log.d(LOG_TAG, "We are a system app.");
+			Log.d(LOG_TAG + ".init", "We are a system app.");
 		} else {
-			Log.d(LOG_TAG, "We are not a system app.");
+			Log.d(LOG_TAG + ".init", "We are not a system app.");
+			preference_all.edit()
+					.putBoolean("pref_internal_power_management", false)
+					.commit();
 		}
 
-		// Lock mode
-		if (preference_all.getBoolean("pref_lockmode", false)) {
-			lockMode = true;
-		} else {
-			lockMode = false;
-		}
+		refreshAdminApp();
+		refreshRootApp();
 
-		if (lockMode) {
-			final DevicePolicyManager dpm = (DevicePolicyManager) mAppContext
-					.getSystemService(Context.DEVICE_POLICY_SERVICE);
-			ComponentName me = new ComponentName(mAppContext,
-					AdminReceiver.class);
-			adminApp = dpm.isAdminActive(me);
-		} else {
-			adminApp = false;
-		}
+		refreshLockMode();
+		refreshOsPowerManagement();
+		refreshInternalPowerManagement();
 
-		if (adminApp) {
-			Log.d(LOG_TAG + ".lBS", "We are an admin.");
-		} else {
-			Log.d(LOG_TAG + ".lBS",
-					"We are not an admin so cannot do anything.");
-		}
+		refreshInternalService();
 
-		if (preference_all.getBoolean("pref_runasroot", false)) {
-			AsyncSuAvailable localSuAvailable = new AsyncSuAvailable();
-			boolean rootAppResult = false;
-			try {
-				rootAppResult = localSuAvailable.execute().get();
-			} catch (InterruptedException e) {
-			} catch (ExecutionException e) {
-			}
-			rootApp = rootAppResult;
-		} else {
-			rootApp = false;
-		}
-		if (rootApp) {
-			Log.d(LOG_TAG + ".lBS", "We are root.");
-		} else {
-			Log.d(LOG_TAG + ".lBS", "We are not root.");
-		}
-		osPowerManagement = preference_all.getBoolean(
-				"pref_os_power_management", false);
-
-		if (preference_all.getBoolean("pref_internalservice", false)) {
-			actionCover = CoreReceiver.ACTION_INTERNAL_LID_STATE_CHANGED;
-		} else {
-			actionCover = CoreReceiver.ACTION_LID_STATE_CHANGED;
-		}
 		if (preference_all.getBoolean("pref_proximity", false)) {
 			forceCheckCoverState = true;
 		}
@@ -165,16 +139,9 @@ public class CoreStateManager {
 		if (preference_all.getBoolean("pref_default_widget", false)) {
 			int widgetId = preference_all.getInt("default_widget_id", -1);
 			if (widgetId == -1) {
-				register_widget("default");
+				registerWidget("default");
 			} else {
-				if (!hmAppWidgetManager.doesWidgetExist("default")) {
-					Log.d(LOG_TAG + ".sWC", "creating default widget with id="
-							+ widgetId);
-					Intent data = new Intent();
-					data.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
-
-					hmAppWidgetManager.createWidget("default", data);
-				}
+				createWidget("default");
 			}
 		}
 
@@ -184,16 +151,9 @@ public class CoreStateManager {
 
 			int widgetId = preference_all.getInt("media_widget_id", -1);
 			if (widgetId == -1) {
-				register_widget("media");
+				registerWidget("media");
 			} else {
-				if (!hmAppWidgetManager.doesWidgetExist("media")) {
-					Log.d(LOG_TAG + ".sWC", "creating media widget with id="
-							+ widgetId);
-					Intent data = new Intent();
-					data.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
-
-					hmAppWidgetManager.createWidget("media", data);
-				}
+				createWidget("media");
 			}
 		}
 
@@ -214,9 +174,14 @@ public class CoreStateManager {
 		torch_on = stateIntent != null
 				&& stateIntent.getIntExtra("state", 0) != 0;
 
+		init = true;
 	}
 
-	public Context getContext() {
+	public static boolean getInitialized() {
+		return init;
+	}
+
+	public static Context getContext() {
 		return mAppContext;
 	}
 
@@ -234,6 +199,14 @@ public class CoreStateManager {
 
 	public void setAlarmFiring(boolean enable) {
 		alarm_firing = enable;
+	}
+
+	public boolean getDefaultActivityStarting() {
+		return defaultActivityStarting;
+	}
+
+	public void setDefaultActivityStarting(boolean enable) {
+		defaultActivityStarting = enable;
 	}
 
 	public boolean getTorchOn() {
@@ -295,8 +268,22 @@ public class CoreStateManager {
 		return osPowerManagement;
 	}
 
-	public void setOsPowerManagement(boolean enable) {
-		osPowerManagement = enable;
+	public void refreshOsPowerManagement() {
+		osPowerManagement = preference_all.getBoolean(
+				"pref_os_power_management", false);
+	}
+
+	public boolean getInternalPowerManagement() {
+		return internalPowerManagement;
+	}
+
+	public void refreshInternalPowerManagement() {
+		internalPowerManagement = preference_all.getBoolean(
+				"pref_internal_power_management", false);
+	}
+
+	public PowerManager getPowerManager() {
+		return mPowerManager;
 	}
 
 	public String getActionCover() {
@@ -331,20 +318,65 @@ public class CoreStateManager {
 		return adminApp;
 	}
 
-	public void enableAdminApp() {
-		adminApp = true;
+	public void refreshAdminApp() {
+		final DevicePolicyManager dpm = (DevicePolicyManager) mAppContext
+				.getSystemService(Context.DEVICE_POLICY_SERVICE);
+		ComponentName me = new ComponentName(mAppContext, AdminReceiver.class);
+		adminApp = dpm.isAdminActive(me);
+		if (adminApp) {
+			Log.d(LOG_TAG + ".init", "We are an admin.");
+		} else {
+			Log.d(LOG_TAG + ".init",
+					"We are not an admin so cannot do anything.");
+		}
+		refreshLockMode();
 	}
 
 	public boolean getRootApp() {
 		return rootApp;
 	}
 
+	public void refreshRootApp() {
+		if (preference_all.getBoolean("pref_runasroot", false)) {
+			AsyncSuAvailable localSuAvailable = new AsyncSuAvailable();
+			boolean rootAppResult = false;
+			try {
+				rootAppResult = localSuAvailable.execute().get();
+			} catch (InterruptedException e) {
+			} catch (ExecutionException e) {
+			}
+			rootApp = rootAppResult;
+		} else {
+			rootApp = false;
+			preference_all.edit().putBoolean("pref_runasroot", false).commit();
+		}
+		if (rootApp) {
+			Log.d(LOG_TAG + ".init", "We are root.");
+		} else {
+			Log.d(LOG_TAG + ".init", "We are not root.");
+		}
+	}
+
+	public void refreshInternalService() {
+		if (preference_all.getBoolean("pref_internalservice", false)) {
+			actionCover = CoreReceiver.ACTION_INTERNAL_LID_STATE_CHANGED;
+		} else {
+			actionCover = CoreReceiver.ACTION_LID_STATE_CHANGED;
+		}
+		restartServices();
+	}
+
 	public boolean getLockMode() {
 		return lockMode;
 	}
 
-	public void setLockMode(boolean enable) {
-		lockMode = enable;
+	public void refreshLockMode() {
+		if (preference_all.getBoolean("pref_lockmode", false) && adminApp) {
+			lockMode = true;
+		} else {
+			lockMode = false;
+			preference_all.edit().putBoolean("pref_lockmode", false).commit();
+		}
 	}
 
 	public long getBlackScreenTime() {
@@ -399,7 +431,8 @@ public class CoreStateManager {
 		}
 	}
 
-	public boolean setDefaultActivity(DefaultActivity activityInstance) {
+	public synchronized boolean setDefaultActivity(
+			DefaultActivity activityInstance) {
 		if (defaultActivity == null) {
 			defaultActivity = activityInstance;
 			return true;
@@ -412,7 +445,8 @@ public class CoreStateManager {
 		}
 	}
 
-	public boolean setConfigurationActivity(Configuration activityInstance) {
+	public synchronized boolean setConfigurationActivity(
+			Configuration activityInstance) {
 		if (configurationActivity == null) {
 			configurationActivity = activityInstance;
 			return true;
@@ -425,11 +459,11 @@ public class CoreStateManager {
 		}
 	}
 
-	public DefaultActivity getDefaultActivity() {
+	public synchronized DefaultActivity getDefaultActivity() {
 		return defaultActivity;
 	}
 
-	public Configuration getConfigurationActivity() {
+	public synchronized Configuration getConfigurationActivity() {
 		return configurationActivity;
 	}
 
@@ -464,9 +498,11 @@ public class CoreStateManager {
 	}
 
 	public void closeDefaultActivity() {
-		if (defaultActivity != null) {
-			defaultActivity.finish();
-		}
+		Log.w(LOG_TAG, "Send close default activity");
+		setDefaultActivityStarting(false);
+		Intent finishDAIntent = new Intent(CoreApp.DA_ACTION_FINISH);
+		LocalBroadcastManager.getInstance(mAppContext).sendBroadcast(
+				finishDAIntent);
 	}
 
 	public void closeConfigurationActivity() {
@@ -476,17 +512,32 @@ public class CoreStateManager {
 	}
 
 	public void closeAllActivity() {
+		Log.w(LOG_TAG, "Try close all activity");
 		closeDefaultActivity();
 		closeConfigurationActivity();
 	}
 
 	public void freeDevice() {
-		closeAllActivity();
 		setBlackScreenTime(0);
+		closeAllActivity();
 	}
 
 	public AudioManager getAudioManager() {
 		return audioManager;
+	}
+
+	public void createWidget(String widgetType) {
+		int widgetId = preference_all.getInt(widgetType + "_widget_id", -1);
+		if (widgetId != -1) {
+			if (!hmAppWidgetManager.doesWidgetExist(widgetType)) {
+				Log.d(LOG_TAG + ".sWC", "creating " + widgetType
+						+ " widget with id=" + widgetId);
+				Intent data = new Intent();
+				data.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+
+				hmAppWidgetManager.createWidget(widgetType, data);
+			}
+		}
 	}
 
 	/**
@@ -499,7 +550,7 @@ public class CoreStateManager {
 	 *            The type of widget (e.g. 'default', 'media', 'notification'
 	 *            etc.)
 	 */
-	public void register_widget(String widgetType) {
+	public void registerWidget(String widgetType) {
 
 		Log.d(LOG_TAG + ".register_widget", "Register widget called for type: "
 				+ widgetType);
@@ -521,7 +572,7 @@ public class CoreStateManager {
 	 *            The type of widget (e.g. 'default', 'media', 'notification'
 	 *            etc.)
 	 */
-	public void unregister_widget(String widgetType) {
+	public void unregisterWidget(String widgetType) {
 
 		Log.d(LOG_TAG + ".unregister_widget",
 				"unregister widget called for type: " + widgetType);
@@ -680,7 +731,8 @@ public class CoreStateManager {
 	}
 
 	public void requestAdmin() {
-		if (!adminApp && lockMode && configurationActivity != null) {
+		if (!adminApp && preference_all.getBoolean("pref_lockmode", false)
+				&& configurationActivity != null) {
 			ComponentName me = new ComponentName(mAppContext,
 					AdminReceiver.class);
 			Log.d(LOG_TAG, "launching dpm overlay");
@@ -707,5 +759,9 @@ public class CoreStateManager {
 		protected Boolean doInBackground(Boolean... params) {
 			return Shell.SU.available();
 		}
+	}
+
+	public static String createID() {
+		return String.valueOf(idCounter.getAndIncrement());
 	}
 }

@@ -47,17 +47,21 @@ public class DefaultActivity extends Activity {
 	private ImageButton torchButton = null;
 	private ImageButton cameraButton = null;
 	private ViewGroup defaultWidgetAreaVG = null;
+	private View mainView = null;
 
 	// manager for home key hack
 	private HomeKeyLocker homeKeyLocker;
 
 	private CoreStateManager mStateManager;
 
+	private String daId;
+	private BroadcastReceiver mMessageReceiver;
+
 	/**
 	 * Refresh the display taking account of device and application state
 	 */
 	private void refreshDisplay() {
-		Log.d(LOG_TAG + ".rD", "refreshing");
+		Log.d(LOG_TAG + daId + ".rD", "refreshing");
 
 		// if the alarm is firing then show the alarm controls, otherwise
 		if (mStateManager.getAlarmFiring()) {
@@ -169,7 +173,7 @@ public class DefaultActivity extends Activity {
 	private void setupNotifications() {
 		StatusBarNotification[] notifs = NotificationService.that
 				.getActiveNotifications();
-		Log.d(LOG_TAG + ".sN", Integer.toString(notifs.length)
+		Log.d(LOG_TAG + daId + ".sN", Integer.toString(notifs.length)
 				+ " notifications");
 		GridView grid = (GridView) findViewById(R.id.default_icon_container);
 		grid.setNumColumns(notifs.length);
@@ -191,6 +195,9 @@ public class DefaultActivity extends Activity {
 		} else {
 			setContentView(R.layout.activity_default);
 		}
+		mainView = findViewById(R.id.default_main);
+		mainView.setFocusable(true);
+		mainView.setFocusableInTouchMode(true);
 	}
 
 	private void setCallInput() {
@@ -201,10 +208,10 @@ public class DefaultActivity extends Activity {
 					new SwipeTouchListener(this,
 							SwipeTouchListener.ActionMode.MODE_CALL));
 			findViewById(R.id.swipe_call).setVisibility(View.VISIBLE);
-			Log.d(LOG_TAG + ".sCI", "Call Swipe");
+			Log.d(LOG_TAG + daId + ".sCI", "Call Swipe");
 		} else {
 			findViewById(R.id.swipe_call).setVisibility(View.GONE);
-			Log.d(LOG_TAG + ".sCI", "Call Button");
+			Log.d(LOG_TAG + daId + ".sCI", "Call Button");
 		}
 	}
 
@@ -215,10 +222,10 @@ public class DefaultActivity extends Activity {
 					new SwipeTouchListener(this,
 							SwipeTouchListener.ActionMode.MODE_ALARM));
 			findViewById(R.id.swipe_alarm).setVisibility(View.VISIBLE);
-			Log.d(LOG_TAG + ".sAI", "Alarm Swipe");
+			Log.d(LOG_TAG + daId + ".sAI", "Alarm Swipe");
 		} else {
 			findViewById(R.id.swipe_alarm).setVisibility(View.GONE);
-			Log.d(LOG_TAG + ".sAI", "Alarm Button");
+			Log.d(LOG_TAG + daId + ".sAI", "Alarm Button");
 		}
 	}
 
@@ -236,10 +243,10 @@ public class DefaultActivity extends Activity {
 							SwipeTouchListener.ActionMode.MODE_TORCH));
 			findViewById(R.id.swipe_torch).setVisibility(View.VISIBLE);
 
-			Log.d(LOG_TAG + ".sTI", "Torch Swipe");
+			Log.d(LOG_TAG + daId + ".sTI", "Torch Swipe");
 		} else {
 			findViewById(R.id.swipe_torch).setVisibility(View.GONE);
-			Log.d(LOG_TAG + ".sTI", "Torch Button");
+			Log.d(LOG_TAG + daId + ".sTI", "Torch Button");
 		}
 
 		// Camera swipe/button
@@ -253,10 +260,10 @@ public class DefaultActivity extends Activity {
 							SwipeTouchListener.ActionMode.MODE_CAMERA));
 			findViewById(R.id.swipe_camera).setVisibility(View.VISIBLE);
 
-			Log.d(LOG_TAG + ".sTI", "Camera Swipe");
+			Log.d(LOG_TAG + daId + ".sTI", "Camera Swipe");
 		} else {
 			findViewById(R.id.swipe_camera).setVisibility(View.GONE);
-			Log.d(LOG_TAG + ".sTI", "Camera Button");
+			Log.d(LOG_TAG + daId + ".sTI", "Camera Button");
 		}
 	}
 
@@ -376,7 +383,7 @@ public class DefaultActivity extends Activity {
 			// detach it
 			ViewGroup parent = (ViewGroup) hostView.getParent();
 			if (parent != null) {
-				Log.d(LOG_TAG + ".sWC",
+				Log.d(LOG_TAG + daId + ".sWC",
 						"hostView had already been added to a group, detaching it.");
 				parent.removeView(hostView);
 			}
@@ -402,7 +409,7 @@ public class DefaultActivity extends Activity {
 
 	/** Called when the user touches the snooze button */
 	public void sendSnooze(View view) {
-		Log.d(LOG_TAG, "Alarm button: snooze alarm");
+		Log.d(LOG_TAG + daId, "Alarm button: snooze alarm");
 		Intent alarmSnooze = new Intent(this, CoreService.class);
 		alarmSnooze.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_SNOOZE_ALARM);
@@ -411,7 +418,7 @@ public class DefaultActivity extends Activity {
 
 	/** Called when the user touches the dismiss button */
 	public void sendDismiss(View view) {
-		Log.d(LOG_TAG, "Alarm button: dismiss... I am wake");
+		Log.d(LOG_TAG + daId, "Alarm button: dismiss... I am wake");
 		Intent alarmDismiss = new Intent(this, CoreService.class);
 		alarmDismiss.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_SNOOZE_ALARM);
@@ -444,13 +451,13 @@ public class DefaultActivity extends Activity {
 
 	// from
 	// http://stackoverflow.com/questions/3712112/search-contact-by-phone-number
-	private static String getContactName(Context ctx, String number) {
+	private String getContactName(Context ctx, String number) {
 
 		if (number.equals("")) {
 			return "";
 		}
 
-		Log.d(LOG_TAG + ".contact", "looking up " + number + "...");
+		Log.d(LOG_TAG + daId + ".contact", "looking up " + number + "...");
 
 		Uri uri = Uri.withAppendedPath(
 				ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
@@ -476,7 +483,7 @@ public class DefaultActivity extends Activity {
 			}
 		}
 
-		Log.d(LOG_TAG + ".contact", "...result is " + name);
+		Log.d(LOG_TAG + daId + ".contact", "...result is " + name);
 		return name;
 	}
 
@@ -501,17 +508,17 @@ public class DefaultActivity extends Activity {
 		mStateManager.setBlackScreenTime(0);
 		findViewById(R.id.default_camera).setVisibility(View.VISIBLE);
 		displayCamera();
-		Log.d("LOG_TAG.hm-cam", "started camera");
+		Log.d("LOG_TAG + daId.hm-cam", "started camera");
 	}
 
 	public void captureCamera(View view) {
-		Log.d("LOG_TAG.hm-cam", "say cheese");
+		Log.d("LOG_TAG + daId.hm-cam", "say cheese");
 		((CameraPreview) findViewById(R.id.default_camera)).capture();
 	}
 
 	public void stopCamera(View view) {
 		stopCamera();
-		Log.d("LOG_TAG.hm-cam", "closed camera");
+		Log.d("LOG_TAG + daId.hm-cam", "closed camera");
 	}
 
 	public void stopCamera() {
@@ -528,11 +535,11 @@ public class DefaultActivity extends Activity {
 		if (mStateManager.getPreference().getBoolean("pref_realfullscreen",
 				false)) {
 			// Remove notification bar
-			getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 			getWindow().clearFlags(
 					WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+			getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 			// Remove navigation bar
-			View decorView = this.getWindow().getDecorView();
+			View decorView = getWindow().getDecorView();
 			decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
 					| View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
 					| View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -564,39 +571,43 @@ public class DefaultActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		Log.d(LOG_TAG + ".onCreate", "creating");
+		daId = CoreStateManager.createID();
+		Log.d(LOG_TAG + daId + ".onCreate", "creating");
 
 		mStateManager = ((CoreApp) getApplicationContext()).getStateManager();
 
+		mStateManager.setDefaultActivityStarting(true);
+
 		// pass a reference back to the state manager
 		if (!mStateManager.setDefaultActivity(this)) {
-			this.finish();
+			Log.w(LOG_TAG + daId, "Warning already default activity set!!!!");
+			finish();
 			return;
 		}
 
 		mStateManager.closeConfigurationActivity();
 
 		// Remove title bar
-		this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+		requestWindowFeature(Window.FEATURE_NO_TITLE);
 
 		// Display in fullscreen
 		setRealFullscreen();
 
 		if (mStateManager.getHardwareAccelerated()) {
-			this.getWindow().addFlags(
+			getWindow().addFlags(
 					WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
 
 		}
+
 		// Keep screen on during display
-		this.getWindow().addFlags(
-				WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
 		// Display before lock screen
-		this.getWindow().addFlags(
-				WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
 
 		// Enable multitouch started outside view
-		this.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SPLIT_TOUCH);
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_SPLIT_TOUCH);
 
 		setMainLayout();
 
@@ -625,10 +636,77 @@ public class DefaultActivity extends Activity {
 		findViewById(R.id.default_undercover).setOnTouchListener(
 				new SwipeTouchListener(this,
 						SwipeTouchListener.ActionMode.MODE_NOTHINGTRUE));
+		mMessageReceiver = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				String action = intent.getAction();
+				if (action.equals(CoreApp.DA_ACTION_TORCH_STATE_CHANGED)) {
+					if (intent.getBooleanExtra(CoreApp.DA_EXTRA_STATE, false)) {
+						torchButton
+								.setImageResource(R.drawable.ic_appwidget_torch_on);
+
+					} else {
+						torchButton
+								.setImageResource(R.drawable.ic_appwidget_torch_off);
+					}
+
+				} else if (action.equals(CoreApp.DA_ACTION_WIDGET_REFRESH)) {
+					setWidgetContent();
+
+				} else if (action.equals(CoreApp.DA_ACTION_BATTERY_REFRESH)) {
+					setBatteryIcon();
+
+				} else if (action
+						.equals(CoreApp.DA_ACTION_NOTIFICATION_REFRESH)) {
+					refreshNotifications();
+
+				} else if (action.equals(CoreApp.DA_ACTION_START_CAMERA)) {
+					startCamera();
+
+				} else if (action.equals(CoreApp.DA_ACTION_STATE_CHANGED)) {
+					switch (intent.getIntExtra(CoreApp.DA_EXTRA_STATE, 0)) {
+					case CoreApp.DA_EXTRA_STATE_NORMAL:
+						displayNormal();
+						break;
+					case CoreApp.DA_EXTRA_STATE_ALARM:
+						displayAlarm();
+						break;
+					case CoreApp.DA_EXTRA_STATE_PHONE:
+						displayPhone();
+						break;
+					case CoreApp.DA_EXTRA_STATE_CAMERA:
+						displayCamera();
+						break;
+					}
+
+				} else if (action.equals(CoreApp.DA_ACTION_SEND_TO_BACKGROUND)) {
+					Log.d(LOG_TAG + daId, "Send to background");
+					moveTaskToBack(true);
+
+				} else if (action.equals(CoreApp.DA_ACTION_FREE_SCREEN)) {
+					Log.d(LOG_TAG + daId, "Call to finish");
+					getWindow()
+							.clearFlags(
+									WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+											| WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+				} else if (action.equals(CoreApp.DA_ACTION_FINISH)) {
+					if (mStateManager.getDefaultActivityStarting()) {
+						Log.w(LOG_TAG + daId, "Starting, could not finish");
+					} else {
+						Log.d(LOG_TAG + daId, "Call to finish");
+						finish();
+					}
+				}
+			}
+		};
 
 		IntentFilter mIntentFilter = new IntentFilter();
 		mIntentFilter.addAction(CoreApp.DA_ACTION_BATTERY_REFRESH);
+		mIntentFilter.addAction(CoreApp.DA_ACTION_FINISH);
+		mIntentFilter.addAction(CoreApp.DA_ACTION_FREE_SCREEN);
 		mIntentFilter.addAction(CoreApp.DA_ACTION_NOTIFICATION_REFRESH);
+		mIntentFilter.addAction(CoreApp.DA_ACTION_SEND_TO_BACKGROUND);
 		mIntentFilter.addAction(CoreApp.DA_ACTION_START_CAMERA);
 		mIntentFilter.addAction(CoreApp.DA_ACTION_STATE_CHANGED);
 		mIntentFilter.addAction(CoreApp.DA_ACTION_TORCH_STATE_CHANGED);
@@ -642,17 +720,30 @@ public class DefaultActivity extends Activity {
 		super.onWindowFocusChanged(hasWindowFocus);
 
 		if (hasWindowFocus) {
-			Log.d(LOG_TAG + ".onWFC", "Get focus.");
+			Log.d(LOG_TAG + daId + ".onWFC", "Get focus.");
 		} else {
-			Log.d(LOG_TAG + ".onWFC", "No focus.");
+			Log.d(LOG_TAG + daId + ".onWFC", "No focus.");
 		}
 
 	}
 
 	@Override
 	protected void onStart() {
+		Log.d(LOG_TAG + daId + ".onStart", "starting");
+		mStateManager.setDefaultActivityStarting(true);
+
 		super.onStart();
-		Log.d(LOG_TAG + ".onStart", "starting");
+	}
+
+	@Override
+	protected void onResume() {
+		Log.d(LOG_TAG + daId + ".onResume", "resuming");
+		mStateManager.setDefaultActivityStarting(true);
+
+		// Keep screen on during display
+		getWindow().addFlags(
+				WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+						| WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
 		if (NotificationService.that != null) {
 			// notification listener service is running, show the current
@@ -660,25 +751,6 @@ public class DefaultActivity extends Activity {
 			setupNotifications();
 			refreshNotifications();
 		}
-	}
-
-	@Override
-	protected void onPause() {
-		Log.d(LOG_TAG + ".onPause", "On pause called.");
-
-		Intent mIntent = new Intent(this, CoreService.class);
-		mIntent.putExtra(CoreApp.CS_EXTRA_TASK,
-				CoreApp.CS_TASK_CHANGE_TOUCHCOVER);
-		startService(mIntent);
-		homeKeyLocker.unlock();
-
-		super.onPause();
-	}
-
-	@Override
-	protected void onResume() {
-		super.onResume();
-		Log.d(LOG_TAG + ".onResume", "On resume called.");
 
 		refreshDisplay();
 
@@ -699,21 +771,36 @@ public class DefaultActivity extends Activity {
 		if (mStateManager.getPreference().getBoolean("pref_disable_home", true)) {
 			homeKeyLocker.lock(this);
 		}
+
+		Intent touchCoverIntent = new Intent(this, CoreService.class);
+		touchCoverIntent.putExtra(CoreApp.CS_EXTRA_TASK,
+				CoreApp.CS_TASK_CHANGE_TOUCHCOVER);
+		touchCoverIntent.putExtra(CoreApp.CS_EXTRA_STATE, true);
+		startService(touchCoverIntent);
+
+		mainView.requestLayout();
+		mainView.requestFocus();
+
+		super.onResume();
+	}
+
+	@Override
+	protected void onPause() {
+		Log.d(LOG_TAG + daId + ".onPause", "pausing");
+
 		Intent mIntent = new Intent(this, CoreService.class);
 		mIntent.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_CHANGE_TOUCHCOVER);
-		mIntent.putExtra(CoreApp.CS_EXTRA_STATE, true);
 		startService(mIntent);
+		homeKeyLocker.unlock();
 
-		// if(findViewById(R.id.default_content).isInTouchMode())
-		// findViewById(R.id.default_content).requestFocusFromTouch();
-		// else
-		// findViewById(R.id.default_content).requestFocus();
+		super.onPause();
 	}
 
 	@Override
 	protected void onStop() {
-		Log.d(LOG_TAG + ".onStop", "stopping");
+		Log.d(LOG_TAG + daId + ".onStop", "stopping");
+
 		if (mStateManager.getPreference().getBoolean("pref_keyguard", true)) {
 			getWindow().addFlags(
 					WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
@@ -734,50 +821,12 @@ public class DefaultActivity extends Activity {
 
 	@Override
 	protected void onDestroy() {
-		Log.d(LOG_TAG + ".onDestroy", "detroying");
+		Log.d(LOG_TAG + daId + ".onDestroy", "detroying");
+		mStateManager.setDefaultActivityStarting(false);
+
 		LocalBroadcastManager.getInstance(this).unregisterReceiver(
 				mMessageReceiver);
 		mStateManager.setDefaultActivity(null);
 		super.onDestroy();
 	}
-
-	private final BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			String action = intent.getAction();
-			if (action.equals(CoreApp.DA_ACTION_TORCH_STATE_CHANGED)) {
-				if (intent.getBooleanExtra(CoreApp.DA_EXTRA_STATE, false)) {
-					torchButton
-							.setImageResource(R.drawable.ic_appwidget_torch_on);
-
-				} else {
-					torchButton
-							.setImageResource(R.drawable.ic_appwidget_torch_off);
-				}
-			} else if (action.equals(CoreApp.DA_ACTION_WIDGET_REFRESH)) {
-				setWidgetContent();
-			} else if (action.equals(CoreApp.DA_ACTION_BATTERY_REFRESH)) {
-				setBatteryIcon();
-			} else if (action.equals(CoreApp.DA_ACTION_NOTIFICATION_REFRESH)) {
-				refreshNotifications();
-			} else if (action.equals(CoreApp.DA_ACTION_START_CAMERA)) {
-				startCamera();
-			} else if (action.equals(CoreApp.DA_ACTION_STATE_CHANGED)) {
-				switch (intent.getIntExtra(CoreApp.DA_EXTRA_STATE, 0)) {
-				case CoreApp.DA_EXTRA_STATE_NORMAL:
-					displayNormal();
-					break;
-				case CoreApp.DA_EXTRA_STATE_ALARM:
-					displayAlarm();
-					break;
-				case CoreApp.DA_EXTRA_STATE_PHONE:
-					displayPhone();
-					break;
-				case CoreApp.DA_EXTRA_STATE_CAMERA:
-					displayCamera();
-					break;
-				}
-			}
-		}
-	};
 }

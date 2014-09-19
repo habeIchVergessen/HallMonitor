@@ -17,7 +17,6 @@ package org.durka.hallmonitor;
 import android.app.ActivityManager;
 import android.app.Service;
 import android.app.admin.DevicePolicyManager;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
@@ -93,6 +92,7 @@ public class CoreService extends Service {
 			ServiceThread svcThread = new ServiceThread(msg);
 			svcThread.start();
 		}
+
 		if (intent != null && intent.hasExtra(CoreApp.CS_EXTRA_TASK)) {
 			int requestedTaskMode = intent
 					.getIntExtra(CoreApp.CS_EXTRA_TASK, 0);
@@ -162,12 +162,12 @@ public class CoreService extends Service {
 				if (enable) {
 					Log.d(LOG_TAG + ".enableCoverTouch",
 							"We're root enabled so lets boost the sensitivity...");
-					if (Build.DEVICE.equals(CoreApp.DEV_SERRANO_LTE_CM10) ||
-						Build.DEVICE.equals(CoreApp.DEV_SERRANO_LTE_CM11) ||
-						Build.DEVICE.equals(CoreApp.DEV_SERRANO_DS_CM10) ||
-						Build.DEVICE.equals(CoreApp.DEV_SERRANO_DS_CM11) ||
-						Build.DEVICE.equals(CoreApp.DEV_SERRANO_3G_CM11)
-                    ) {
+					if (Build.DEVICE.equals(CoreApp.DEV_SERRANO_LTE_CM10)
+							|| Build.DEVICE
+									.equals(CoreApp.DEV_SERRANO_LTE_CM11)
+							|| Build.DEVICE.equals(CoreApp.DEV_SERRANO_DS_CM10)
+							|| Build.DEVICE.equals(CoreApp.DEV_SERRANO_DS_CM11)
+							|| Build.DEVICE.equals(CoreApp.DEV_SERRANO_3G_CM11)) {
 						Shell.SU.run(new String[] {
 								"echo module_on_master > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result",
 								"echo clear_cover_mode,3 > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result" });
@@ -183,9 +183,7 @@ public class CoreService extends Service {
 					Log.d(LOG_TAG + ".enableCoverTouch",
 							"...Sensitivity reverted, sanity is restored!");
 				}
-			} else
-                Log.d(LOG_TAG + ".enableCoverTouch",
-                        "We're root disabled. boost the sensitivity is impossible");
+			}
 		}
 	}
 
@@ -372,6 +370,7 @@ public class CoreService extends Service {
 			case CoreApp.CS_TASK_MAINLAUNCH:
 				if (!mStateManager.getMainLaunched()) {
 					mStateManager.setMainLaunched(true);
+					mStateManager.startServices();
 					Log.d(LOG_TAG + ".handler", "Thread " + msg.arg1
 							+ ": Mainthread launched");
 					while (mStateManager.getMainLaunched()
@@ -426,23 +425,23 @@ public class CoreService extends Service {
 				if (mStateManager.getLockMode()) {
 					final DevicePolicyManager dpm = (DevicePolicyManager) ctx
 							.getSystemService(Context.DEVICE_POLICY_SERVICE);
-
-                    ComponentName me = new ComponentName(ctx, AdminReceiver.class);
-                    if (!dpm.isAdminActive(me)) {
-                        // if we're not an admin, we can't do anything
-                        Log.d(LOG_TAG + ".lBS", "We are not an admin so cannot do anything.");
-                    } else {
-                        Log.d(LOG_TAG + ".lBS", "Lock now.");
-                        dpm.lockNow();
-                    }
+					Log.d(LOG_TAG + ".lBS", "Lock now.");
+					dpm.lockNow();
+					Intent freeScreenDAIntent = new Intent(
+							CoreApp.DA_ACTION_FREE_SCREEN);
+					LocalBroadcastManager.getInstance(ctx).sendBroadcast(
+							freeScreenDAIntent);
 				} else if (mStateManager.getOsPowerManagement()) {
 					Log.d(LOG_TAG + ".lBS", "OS must manage screen off.");
-				} else if (mStateManager.getSystemApp()) {
-					PowerManager pm = (PowerManager) ctx
-							.getSystemService(Context.POWER_SERVICE);
-					if (pm.isScreenOn()) {
+					Intent freeScreenDAIntent = new Intent(
+							CoreApp.DA_ACTION_FREE_SCREEN);
+					LocalBroadcastManager.getInstance(ctx).sendBroadcast(
+							freeScreenDAIntent);
+				} else if (mStateManager.getInternalPowerManagement()) {
+					if (mStateManager.getPowerManager().isScreenOn()) {
 						Log.d(LOG_TAG + ".lBS", "Go to sleep now.");
-						pm.goToSleep(SystemClock.uptimeMillis());
+						mStateManager.getPowerManager().goToSleep(
+								SystemClock.uptimeMillis());
 					} else {
 						Log.d(LOG_TAG + ".lBS", "Screen already off.");
 					}
@@ -450,18 +449,14 @@ public class CoreService extends Service {
 			} else {
 				Log.d(LOG_TAG + ".lBS", "Cover open???.");
 			}
-			mStateManager.closeAllActivity();
 		}
 
 		private void wakeUpDevice(Context ctx) {
-			if (mStateManager.getOsPowerManagement()) {
-
-			} else if (mStateManager.getSystemApp()) {
-				PowerManager pm = (PowerManager) ctx
-						.getSystemService(Context.POWER_SERVICE);
-				if (!pm.isScreenOn()) {
+			if (mStateManager.getInternalPowerManagement()) {
+				if (!mStateManager.getPowerManager().isScreenOn()) {
 					Log.d(LOG_TAG + ".wUD", "WakeUp device.");
-					pm.wakeUp(SystemClock.uptimeMillis());
+					mStateManager.getPowerManager().wakeUp(
+							SystemClock.uptimeMillis());
 				} else {
 					Log.d(LOG_TAG + ".wUD", "Screen already on.");
 				}
@@ -469,13 +464,12 @@ public class CoreService extends Service {
 				// FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK
 				// if possible
 				Log.d(LOG_TAG + ".wUD", "aww why can't I hit snooze");
-				PowerManager pm = (PowerManager) ctx
-						.getSystemService(Context.POWER_SERVICE);
 				@SuppressWarnings("deprecation")
-				PowerManager.WakeLock wl = pm.newWakeLock(
-						PowerManager.FULL_WAKE_LOCK
-								| PowerManager.ACQUIRE_CAUSES_WAKEUP,
-						ctx.getString(R.string.app_name));
+				PowerManager.WakeLock wl = mStateManager.getPowerManager()
+						.newWakeLock(
+								PowerManager.FULL_WAKE_LOCK
+										| PowerManager.ACQUIRE_CAUSES_WAKEUP,
+								ctx.getString(R.string.app_name));
 				wl.acquire();
 				wl.release();
 			}
@@ -490,9 +484,7 @@ public class CoreService extends Service {
 				mStateManager.setBlackScreenTime(0);
 			}
 
-			// save the cover state
-			// Events.set_cover(true);
-
+			// if (!mStateManager.getDefaultActivityStarting()) {
 			// bring up the default activity window
 			// we are using the show when locked flag as we'll re-use this
 			// method to show the screen on power button press
@@ -502,6 +494,9 @@ public class CoreService extends Service {
 							| Intent.FLAG_ACTIVITY_CLEAR_TOP
 							| Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS));
 			Log.d(LOG_TAG + ".bDATF", "Started activity.");
+			// } else {
+			// Log.d(LOG_TAG + ".bDATF", "Activity already starting.");
+			// }
 
 			if (!noBlackScreen) {
 				// step 2: wait for the delay period and turn the screen off

@@ -36,6 +36,7 @@ public class Configuration extends PreferenceActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		Log.d(LOG_TAG + ".onCreate", "creating");
 
 		mStateManager = ((CoreApp) getApplicationContext()).getStateManager();
 
@@ -44,8 +45,6 @@ public class Configuration extends PreferenceActivity {
 			this.finish();
 			return;
 		}
-
-		mStateManager.closeDefaultActivity();
 
 		PreferenceFragment preferenceFragment = new PreferenceFragmentLoader();
 
@@ -59,9 +58,16 @@ public class Configuration extends PreferenceActivity {
 	}
 
 	@Override
+	protected void onStart() {
+		Log.d(LOG_TAG + ".onStart", "starting");
+
+		super.onStart();
+	}
+
+	@Override
 	protected void onResume() {
 		super.onResume();
-		Log.d(LOG_TAG + ".onResume", "On resume called.");
+		Log.d(LOG_TAG + ".onResume", "resuming");
 
 		if (mStateManager.getDefaultActivityRunning()) {
 			mStateManager.closeDefaultActivity();
@@ -72,13 +78,22 @@ public class Configuration extends PreferenceActivity {
 
 	@Override
 	protected void onPause() {
-		// finish();
+		Log.d(LOG_TAG + ".onPause", "pausing");
+
 		super.onPause();
+	}
+
+	@Override
+	protected void onStop() {
+		Log.d(LOG_TAG + ".onStop", "stopping");
+
+		super.onStop();
 	}
 
 	@Override
 	protected void onDestroy() {
 		Log.d(LOG_TAG + ".onDestroy", "detroying");
+
 		mStateManager.setConfigurationActivity(null);
 		super.onDestroy();
 	}
@@ -182,50 +197,14 @@ public class Configuration extends PreferenceActivity {
 		// call back for admin access request
 		case CoreApp.DEVICE_ADMIN_WAITING:
 			if (result == Activity.RESULT_OK) {
-				mStateManager.enableAdminApp();
-				// we asked to be an admin and the user clicked Activate
-				// (the intent receiver takes care of showing a toast)
-				// go ahead and start the service
-				if (mStateManager.getPreference().getBoolean("pref_enabled",
-						false)) {
-					ctx.startService(new Intent(ctx, CoreService.class));
-					if (mStateManager.getPreference().getBoolean(
-							"pref_internalservice", false)) {
-						if (mStateManager.getPreference().getBoolean(
-								"pref_realhall", false)) {
-							ctx.startService(new Intent(ctx,
-									ViewCoverHallService.class));
-						} else if (mStateManager.getPreference().getBoolean(
-								"pref_proximity", false)) {
-							ctx.startService(new Intent(ctx,
-									ViewCoverProximityService.class));
-						}
-					}
-					if (mStateManager.getPreference().getBoolean(
-							"pref_do_notifications", false)) {
-						ctx.startService(new Intent(ctx,
-								NotificationService.class));
-					}
-				}
+				mStateManager.refreshAdminApp();
 			} else {
+				mStateManager.refreshAdminApp();
 				// we asked to be an admin and the user clicked Cancel
 				// (why?)
 				// complain, and un-check pref_enabled
 				Toast.makeText(ctx, ctx.getString(R.string.admin_refused),
 						Toast.LENGTH_SHORT).show();
-				Log.d(LOG_TAG + ".Evt.activity_result",
-						"pref_enabled = "
-								+ Boolean.toString(mStateManager
-										.getPreference().getBoolean(
-												"pref_enabled", true)));
-				mStateManager.getPreference().edit()
-						.putBoolean("pref_enabled", false).commit();
-				Log.d(LOG_TAG + ".Evt.activity_result",
-						"pref_enabled = "
-								+ Boolean.toString(mStateManager
-										.getPreference().getBoolean(
-												"pref_enabled", true)));
-
 			}
 			break;
 		// call back for appwidget pick
