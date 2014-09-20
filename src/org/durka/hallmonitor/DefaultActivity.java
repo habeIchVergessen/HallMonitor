@@ -57,6 +57,8 @@ public class DefaultActivity extends Activity {
 	private String daId;
 	private BroadcastReceiver mMessageReceiver;
 
+	private int allLayoutParams;
+
 	/**
 	 * Refresh the display taking account of device and application state
 	 */
@@ -413,7 +415,7 @@ public class DefaultActivity extends Activity {
 		Intent alarmSnooze = new Intent(this, CoreService.class);
 		alarmSnooze.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_SNOOZE_ALARM);
-		startService(alarmSnooze);
+		mStateManager.sendToCoreService(alarmSnooze);
 	}
 
 	/** Called when the user touches the dismiss button */
@@ -422,7 +424,7 @@ public class DefaultActivity extends Activity {
 		Intent alarmDismiss = new Intent(this, CoreService.class);
 		alarmDismiss.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_SNOOZE_ALARM);
-		startService(alarmDismiss);
+		mStateManager.sendToCoreService(alarmDismiss);
 	}
 
 	/** Called when the user touches the hangup button */
@@ -430,7 +432,7 @@ public class DefaultActivity extends Activity {
 		Intent hangUpCallIntent = new Intent(this, CoreService.class);
 		hangUpCallIntent.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_HANGUP_CALL);
-		startService(hangUpCallIntent);
+		mStateManager.sendToCoreService(hangUpCallIntent);
 	}
 
 	/** Called when the user touches the pickup button */
@@ -438,7 +440,7 @@ public class DefaultActivity extends Activity {
 		Intent pickUpCallIntent = new Intent(this, CoreService.class);
 		pickUpCallIntent.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_PICKUP_CALL);
-		startService(pickUpCallIntent);
+		mStateManager.sendToCoreService(pickUpCallIntent);
 	}
 
 	/** Called when the user touches the torch button */
@@ -446,7 +448,7 @@ public class DefaultActivity extends Activity {
 		Intent torchIntent = new Intent(this, CoreService.class);
 		torchIntent.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_TORCH_TOGGLE);
-		startService(torchIntent);
+		mStateManager.sendToCoreService(torchIntent);
 	}
 
 	// from
@@ -493,32 +495,32 @@ public class DefaultActivity extends Activity {
 	}
 
 	public void startCamera() {
+		Log.d(LOG_TAG, "starting camera");
 		mStateManager.setCameraUp(true);
+		mStateManager.setBlackScreenTime(0);
+		getWindow().addFlags(
+				WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+						| WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
 		if (mStateManager.getTorchOn()
 				&& mStateManager.getPreference().getBoolean(
 						"pref_flash_controls_alternative", false)) {
 			mStateManager.turnOffFlash();
 			torchButton.setImageResource(R.drawable.ic_appwidget_torch_off);
 		}
-		/*
-		 * Intent mIntent = new Intent(this, CoreService.class);
-		 * mIntent.putExtra(CoreApp.CS_EXTRA_TASK,
-		 * CoreApp.CS_TASK_CANCEL_BLACKSCREEN); startService(mIntent);
-		 */
-		mStateManager.setBlackScreenTime(0);
 		findViewById(R.id.default_camera).setVisibility(View.VISIBLE);
 		displayCamera();
-		Log.d("LOG_TAG + daId.hm-cam", "started camera");
+		Log.d(LOG_TAG, "started camera");
 	}
 
 	public void captureCamera(View view) {
-		Log.d("LOG_TAG + daId.hm-cam", "say cheese");
+		Log.d(LOG_TAG, "camera say cheese");
 		((CameraPreview) findViewById(R.id.default_camera)).capture();
 	}
 
 	public void stopCamera(View view) {
 		stopCamera();
-		Log.d("LOG_TAG + daId.hm-cam", "closed camera");
+		Log.d(LOG_TAG, "closed camera");
 	}
 
 	public void stopCamera() {
@@ -528,16 +530,15 @@ public class DefaultActivity extends Activity {
 		Intent mIntent = new Intent(this, CoreService.class);
 		mIntent.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_AUTO_BLACKSCREEN);
-		startService(mIntent);
+		mStateManager.sendToCoreService(mIntent);
 	}
 
 	private void setRealFullscreen() {
 		if (mStateManager.getPreference().getBoolean("pref_realfullscreen",
 				false)) {
 			// Remove notification bar
-			getWindow().clearFlags(
-					WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
-			getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+			allLayoutParams |= WindowManager.LayoutParams.FLAG_FULLSCREEN;
+
 			// Remove navigation bar
 			View decorView = getWindow().getDecorView();
 			decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -585,6 +586,8 @@ public class DefaultActivity extends Activity {
 			return;
 		}
 
+		mStateManager.acquireCPUDA();
+
 		mStateManager.closeConfigurationActivity();
 
 		// Remove title bar
@@ -594,21 +597,19 @@ public class DefaultActivity extends Activity {
 		setRealFullscreen();
 
 		if (mStateManager.getHardwareAccelerated()) {
-			getWindow().addFlags(
-					WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
+			allLayoutParams |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
 
 		}
 
 		// Keep screen on during display
-		getWindow().addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
-		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		allLayoutParams |= WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+				| WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+				// Display before lock screen
+				| WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+				// Enable multitouch started outside view
+				| WindowManager.LayoutParams.FLAG_SPLIT_TOUCH;
 
-		// Display before lock screen
-		getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
-
-		// Enable multitouch started outside view
-		getWindow().addFlags(WindowManager.LayoutParams.FLAG_SPLIT_TOUCH);
-
+		getWindow().addFlags(allLayoutParams);
 		setMainLayout();
 
 		// get the views we need
@@ -642,12 +643,21 @@ public class DefaultActivity extends Activity {
 				String action = intent.getAction();
 				if (action.equals(CoreApp.DA_ACTION_TORCH_STATE_CHANGED)) {
 					if (intent.getBooleanExtra(CoreApp.DA_EXTRA_STATE, false)) {
-						torchButton
-								.setImageResource(R.drawable.ic_appwidget_torch_on);
-
+						runOnUiThread(new Runnable() {
+							@Override
+							public void run() {
+								torchButton
+										.setImageResource(R.drawable.ic_appwidget_torch_on);
+							}
+						});
 					} else {
-						torchButton
-								.setImageResource(R.drawable.ic_appwidget_torch_off);
+						runOnUiThread(new Runnable() {
+							@Override
+							public void run() {
+								torchButton
+										.setImageResource(R.drawable.ic_appwidget_torch_off);
+							}
+						});
 					}
 
 				} else if (action.equals(CoreApp.DA_ACTION_WIDGET_REFRESH)) {
@@ -720,8 +730,10 @@ public class DefaultActivity extends Activity {
 		super.onWindowFocusChanged(hasWindowFocus);
 
 		if (hasWindowFocus) {
+			mStateManager.acquireCPUDA();
 			Log.d(LOG_TAG + daId + ".onWFC", "Get focus.");
 		} else {
+			mStateManager.releaseCPUDA();
 			Log.d(LOG_TAG + daId + ".onWFC", "No focus.");
 		}
 
@@ -729,6 +741,7 @@ public class DefaultActivity extends Activity {
 
 	@Override
 	protected void onStart() {
+		mStateManager.acquireCPUDA();
 		Log.d(LOG_TAG + daId + ".onStart", "starting");
 		mStateManager.setDefaultActivityStarting(true);
 
@@ -737,6 +750,7 @@ public class DefaultActivity extends Activity {
 
 	@Override
 	protected void onResume() {
+		mStateManager.acquireCPUDA();
 		Log.d(LOG_TAG + daId + ".onResume", "resuming");
 		mStateManager.setDefaultActivityStarting(true);
 
@@ -776,12 +790,14 @@ public class DefaultActivity extends Activity {
 		touchCoverIntent.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_CHANGE_TOUCHCOVER);
 		touchCoverIntent.putExtra(CoreApp.CS_EXTRA_STATE, true);
-		startService(touchCoverIntent);
+		mStateManager.sendToCoreService(touchCoverIntent);
 
 		mainView.requestLayout();
 		mainView.requestFocus();
 
 		super.onResume();
+
+		mStateManager.releaseCPUDA();
 	}
 
 	@Override
@@ -791,9 +807,10 @@ public class DefaultActivity extends Activity {
 		Intent mIntent = new Intent(this, CoreService.class);
 		mIntent.putExtra(CoreApp.CS_EXTRA_TASK,
 				CoreApp.CS_TASK_CHANGE_TOUCHCOVER);
-		startService(mIntent);
+		mStateManager.sendToCoreService(mIntent);
 		homeKeyLocker.unlock();
 
+		mStateManager.releaseCPUDA();
 		super.onPause();
 	}
 
@@ -811,7 +828,7 @@ public class DefaultActivity extends Activity {
 			Intent torchIntent = new Intent(this, CoreService.class);
 			torchIntent.putExtra(CoreApp.CS_EXTRA_TASK,
 					CoreApp.CS_TASK_TORCH_TOGGLE);
-			startService(torchIntent);
+			mStateManager.sendToCoreService(torchIntent);
 		}
 		if (mStateManager.getCameraUp()) {
 			mStateManager.setCameraUp(false);
@@ -826,6 +843,7 @@ public class DefaultActivity extends Activity {
 
 		LocalBroadcastManager.getInstance(this).unregisterReceiver(
 				mMessageReceiver);
+		mStateManager.releaseCPUDA();
 		mStateManager.setDefaultActivity(null);
 		super.onDestroy();
 	}

@@ -17,6 +17,8 @@ package org.durka.hallmonitor;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,6 +29,7 @@ import android.app.admin.DevicePolicyManager;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -39,7 +42,9 @@ import android.hardware.Camera.Parameters;
 import android.media.AudioManager;
 import android.os.AsyncTask;
 import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
 import android.os.SystemClock;
+import android.os.UserHandle;
 import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.telephony.TelephonyManager;
@@ -93,12 +98,17 @@ public class CoreStateManager {
 	private boolean defaultActivityStarting = false;
 
 	private CoreReceiver mCoreReceiver;
+	private CoreService mCoreService;
+	private Method startCoreServiceAsUser;
 
 	private static long blackscreen_time = 0;
 
 	private String actionCover = CoreReceiver.ACTION_LID_STATE_CHANGED;
 
 	private final PowerManager mPowerManager;
+	private final WakeLock daPartialWakeLock;
+	private final WakeLock globalPartialWakeLock;
+	private int globalPartialWakeLockCount;
 
 	private static AtomicInteger idCounter = new AtomicInteger();
 
@@ -106,6 +116,12 @@ public class CoreStateManager {
 		mAppContext = context;
 		mPowerManager = (PowerManager) mAppContext
 				.getSystemService(Context.POWER_SERVICE);
+		daPartialWakeLock = mPowerManager.newWakeLock(
+				PowerManager.PARTIAL_WAKE_LOCK, "CoreStateManager");
+		daPartialWakeLock.setReferenceCounted(false);
+		globalPartialWakeLock = mPowerManager.newWakeLock(
+				PowerManager.PARTIAL_WAKE_LOCK, "CoreReceiver");
+		globalPartialWakeLock.setReferenceCounted(true);
 
 		preference_all = PreferenceManager
 				.getDefaultSharedPreferences(mAppContext);
@@ -113,9 +129,9 @@ public class CoreStateManager {
 		// Enable access to sleep mode
 		systemApp = (mAppContext.getApplicationInfo().flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
 		if (systemApp) {
-			Log.d(LOG_TAG + ".init", "We are a system app.");
+			Log.d(LOG_TAG, "We are a system app.");
 		} else {
-			Log.d(LOG_TAG + ".init", "We are not a system app.");
+			Log.d(LOG_TAG, "We are not a system app.");
 			preference_all.edit()
 					.putBoolean("pref_internal_power_management", false)
 					.commit();
@@ -242,12 +258,10 @@ public class CoreStateManager {
 						"Hall effect sensor device file not found!");
 			}
 			boolean isClosed = (status.compareTo("CLOSE") == 0);
-			Log.d(LOG_TAG + ".cover_closed", "Cover closed state is: "
-					+ isClosed);
+			Log.d(LOG_TAG, "Cover closed state is: " + isClosed);
 			return isClosed;
 		} else {
-			Log.d(LOG_TAG + ".cover_closed", "Cover closed state is: "
-					+ cover_closed);
+			Log.d(LOG_TAG, "Cover closed state is: " + cover_closed);
 			return cover_closed;
 		}
 	}
@@ -324,10 +338,9 @@ public class CoreStateManager {
 		ComponentName me = new ComponentName(mAppContext, AdminReceiver.class);
 		adminApp = dpm.isAdminActive(me);
 		if (adminApp) {
-			Log.d(LOG_TAG + ".init", "We are an admin.");
+			Log.d(LOG_TAG, "We are an admin.");
 		} else {
-			Log.d(LOG_TAG + ".init",
-					"We are not an admin so cannot do anything.");
+			Log.d(LOG_TAG, "We are not an admin so cannot do anything.");
 		}
 		refreshLockMode();
 	}
@@ -351,9 +364,9 @@ public class CoreStateManager {
 			preference_all.edit().putBoolean("pref_runasroot", false).commit();
 		}
 		if (rootApp) {
-			Log.d(LOG_TAG + ".init", "We are root.");
+			Log.d(LOG_TAG, "We are root.");
 		} else {
-			Log.d(LOG_TAG + ".init", "We are not root.");
+			Log.d(LOG_TAG, "We are not root.");
 		}
 	}
 
@@ -407,6 +420,7 @@ public class CoreStateManager {
 			 */
 			mCoreReceiver = new CoreReceiver();
 			IntentFilter intfil = new IntentFilter();
+			intfil.setPriority(990);
 			intfil.addAction(Intent.ACTION_HEADSET_PLUG);
 			intfil.addAction(Intent.ACTION_SCREEN_ON);
 			intfil.addAction(Intent.ACTION_SCREEN_OFF);
@@ -429,6 +443,24 @@ public class CoreStateManager {
 			mAppContext.unregisterReceiver(mCoreReceiver);
 			mCoreReceiver = null;
 		}
+	}
+
+	public void registerCoreService(CoreService mService) {
+		mCoreService = mService;
+		try {
+			startCoreServiceAsUser = ((ContextWrapper) mCoreService).getClass()
+					.getMethod("startServiceAsUser", Intent.class,
+							UserHandle.class);
+			Log.d(LOG_TAG, "CoreService registred");
+		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void unregisterCoreService() {
+		mCoreService = null;
+		startCoreServiceAsUser = null;
+		Log.d(LOG_TAG, "CoreService unregistred");
 	}
 
 	public synchronized boolean setDefaultActivity(
@@ -501,7 +533,7 @@ public class CoreStateManager {
 		Log.w(LOG_TAG, "Send close default activity");
 		setDefaultActivityStarting(false);
 		Intent finishDAIntent = new Intent(CoreApp.DA_ACTION_FINISH);
-		LocalBroadcastManager.getInstance(mAppContext).sendBroadcast(
+		LocalBroadcastManager.getInstance(mAppContext).sendBroadcastSync(
 				finishDAIntent);
 	}
 
@@ -530,8 +562,8 @@ public class CoreStateManager {
 		int widgetId = preference_all.getInt(widgetType + "_widget_id", -1);
 		if (widgetId != -1) {
 			if (!hmAppWidgetManager.doesWidgetExist(widgetType)) {
-				Log.d(LOG_TAG + ".sWC", "creating " + widgetType
-						+ " widget with id=" + widgetId);
+				Log.d(LOG_TAG, "creating " + widgetType + " widget with id="
+						+ widgetId);
 				Intent data = new Intent();
 				data.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
 
@@ -552,11 +584,10 @@ public class CoreStateManager {
 	 */
 	public void registerWidget(String widgetType) {
 
-		Log.d(LOG_TAG + ".register_widget", "Register widget called for type: "
-				+ widgetType);
+		Log.d(LOG_TAG, "Register widget called for type: " + widgetType);
 		// hand off to the HM App Widget Manager for processing
 		if (widget_settings_ongoing) {
-			Log.d(LOG_TAG + ".register_widget", "skipping, already inflight");
+			Log.d(LOG_TAG, "skipping, already inflight");
 		} else {
 			hmAppWidgetManager.registerWidget(widgetType);
 		}
@@ -574,8 +605,7 @@ public class CoreStateManager {
 	 */
 	public void unregisterWidget(String widgetType) {
 
-		Log.d(LOG_TAG + ".unregister_widget",
-				"unregister widget called for type: " + widgetType);
+		Log.d(LOG_TAG, "unregister widget called for type: " + widgetType);
 		// hand off to the HM App Widget Manager for processing
 		hmAppWidgetManager.unregisterWidget(widgetType);
 	}
@@ -584,12 +614,31 @@ public class CoreStateManager {
 		return hmAppWidgetManager;
 	}
 
+	public void sendToCoreService(Intent mIntent) {
+		if (startCoreServiceAsUser != null) {
+			try {
+				startCoreServiceAsUser.invoke(mCoreService, mIntent,
+						android.os.Process.myUserHandle());
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				e.printStackTrace();
+			}
+		} else {
+			Log.w(LOG_TAG, "No CoreService registred");
+		}
+	}
+
 	/**
 	 * Starts the HallMonitor services.
 	 * 
 	 */
 	public void startServices() {
-		Log.d(LOG_TAG + ".start_service", "Start service called.");
+		Log.d(LOG_TAG, "Start all services called.");
+
+		acquireCPUGlobal();
 
 		mAppContext.startService(new Intent(mAppContext, CoreService.class));
 		if (preference_all.getBoolean("pref_internalservice", false)) {
@@ -611,6 +660,8 @@ public class CoreStateManager {
 					CoreApp.CS_TASK_LAUNCH_ACTIVITY);
 			mAppContext.startService(mIntent);
 		}
+
+		releaseCPUGlobal();
 	}
 
 	/**
@@ -623,7 +674,7 @@ public class CoreStateManager {
 
 	public void stopServices(boolean override_keep_admin) {
 
-		Log.d(LOG_TAG + ".stop_service", "Stop service called.");
+		Log.d(LOG_TAG, "Stop all services called.");
 
 		if (getServiceRunning(ViewCoverHallService.class)) {
 			mAppContext.stopService(new Intent(mAppContext,
@@ -669,7 +720,7 @@ public class CoreStateManager {
 	 */
 	public boolean getServiceRunning(@SuppressWarnings("rawtypes") Class svc) {
 
-		Log.d(LOG_TAG + ".service_running", "Is service running called.");
+		Log.d(LOG_TAG, "Is service running called.");
 
 		ActivityManager manager = (ActivityManager) mAppContext
 				.getSystemService(Context.ACTIVITY_SERVICE);
@@ -677,14 +728,12 @@ public class CoreStateManager {
 				.getRunningServices(Integer.MAX_VALUE)) {
 			if (svc.getName().equals(service.service.getClassName())) {
 				// the service is running
-				Log.d(LOG_TAG + ".Is.service_running", "The " + svc.getName()
-						+ " is running.");
+				Log.d(LOG_TAG, "The " + svc.getName() + " is running.");
 				return true;
 			}
 		}
 		// the service must not be running
-		Log.d(LOG_TAG + ".service_running", "The " + svc.getName()
-				+ " service is NOT running.");
+		Log.d(LOG_TAG, "The " + svc.getName() + " service is NOT running.");
 		return false;
 	}
 
@@ -702,7 +751,7 @@ public class CoreStateManager {
 		p.setFlashMode(Parameters.FLASH_MODE_TORCH);
 		camera.setParameters(p);
 		camera.startPreview();
-		Log.d(LOG_TAG + ".TA.tOnF", "turned on!");
+		Log.d(LOG_TAG, "Flash turned on!");
 	}
 
 	// Turn Off Flash
@@ -715,7 +764,7 @@ public class CoreStateManager {
 		if (camera != null) {
 			camera.release();
 			camera = null;
-			Log.d(LOG_TAG + ".TA.tOffF", "turned off and camera released!");
+			Log.d(LOG_TAG, "Flash turned off and camera released!");
 		}
 		setTorchOn(false);
 	}
@@ -736,13 +785,11 @@ public class CoreStateManager {
 			ComponentName me = new ComponentName(mAppContext,
 					AdminReceiver.class);
 			Log.d(LOG_TAG, "launching dpm overlay");
-			getContext()
-					.startActivity(
-							new Intent(getContext(), Configuration.class)
-									.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-											| Intent.FLAG_ACTIVITY_NO_ANIMATION
-											| Intent.FLAG_ACTIVITY_CLEAR_TOP
-											| Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS));
+			mAppContext.startActivity(new Intent(getContext(),
+					Configuration.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+					| Intent.FLAG_ACTIVITY_NO_ANIMATION
+					| Intent.FLAG_ACTIVITY_CLEAR_TOP
+					| Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS));
 			Log.d(LOG_TAG, "Started configuration activity.");
 			Intent coup = new Intent(
 					DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
@@ -763,5 +810,39 @@ public class CoreStateManager {
 
 	public static String createID() {
 		return String.valueOf(idCounter.getAndIncrement());
+	}
+
+	public void acquireCPUDA() {
+		daPartialWakeLock.acquire();
+	}
+
+	public void releaseCPUDA() {
+		if (daPartialWakeLock.isHeld()) {
+			daPartialWakeLock.release();
+		}
+	}
+
+	public void acquireCPUGlobal() {
+		globalPartialWakeLock.acquire();
+		globalPartialWakeLockCount++;
+		Log.d(LOG_TAG, "globalPartialWakeLockCount="
+				+ globalPartialWakeLockCount);
+	}
+
+	public void releaseCPUGlobal() {
+		if (globalPartialWakeLock.isHeld()) {
+			globalPartialWakeLock.release();
+			globalPartialWakeLockCount--;
+			Log.d(LOG_TAG, "globalPartialWakeLockCount="
+					+ globalPartialWakeLockCount);
+		}
+	}
+
+	public boolean getInActivity() {
+		if (camera_up | phone_ringing | alarm_firing) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 }
