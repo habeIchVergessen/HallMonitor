@@ -65,6 +65,9 @@ public class DefaultActivity extends Activity {
 	private void refreshDisplay() {
 		Log.d(LOG_TAG + daId + ".rD", "refreshing");
 
+		// Update all custom data and time view.
+		updateDateTime();
+
 		// if the alarm is firing then show the alarm controls, otherwise
 		if (mStateManager.getAlarmFiring()) {
 			displayAlarm();
@@ -345,6 +348,17 @@ public class DefaultActivity extends Activity {
 		}
 	}
 
+	public void updateDateTime() {
+		String mDate = DateFormat.getDateInstance(DateFormat.MEDIUM).format(
+				new Date());
+		String mTime = DateFormat.getTimeInstance(DateFormat.SHORT).format(
+				new Date());
+
+		((TextView) findViewById(R.id.default_text_fulltime_very_small))
+				.setText(mTime + " " + mDate);
+		((TextView) findViewById(R.id.default_text_clock_date)).setText(mDate);
+	}
+
 	/**
 	 * If we have a media app widget and media is playing or headphones are
 	 * connected then display that, otherwise if we have a default app widget to
@@ -352,6 +366,7 @@ public class DefaultActivity extends Activity {
 	 * (which is part of the default layout so will show anyway) will do this
 	 * simply by setting the widgetType
 	 */
+	@SuppressWarnings("deprecation")
 	public void setWidgetContent() {
 		if (!(mStateManager.getPreference().getBoolean("pref_media_widget",
 				false) || mStateManager.getPreference().getBoolean(
@@ -372,11 +387,6 @@ public class DefaultActivity extends Activity {
 		AppWidgetHostView hostView = mStateManager.getHMAppWidgetManager()
 				.getAppWidgetHostViewByType(widgetType);
 
-		String mDate = DateFormat.getDateInstance(DateFormat.MEDIUM).format(
-				new Date());
-		String mTime = DateFormat.getTimeInstance(DateFormat.SHORT).format(
-				new Date());
-
 		// add the required widget
 		if (hostView != null) {
 			((RelativeLayout) defaultWidgetAreaVG).removeAllViews();
@@ -393,15 +403,11 @@ public class DefaultActivity extends Activity {
 			// add the widget to the view
 			((RelativeLayout) defaultWidgetAreaVG).addView(hostView);
 
-			((TextView) findViewById(R.id.default_text_fulltime_very_small))
-					.setText(mTime + " " + mDate);
 			changeTimeDateDisplay(true);
 			defaultWidgetAreaVG.setVisibility(View.VISIBLE);
 			findViewById(R.id.default_text_fulltime_very_small).setVisibility(
 					View.VISIBLE);
 		} else {
-			((TextView) findViewById(R.id.default_text_clock_date))
-					.setText(mDate);
 			defaultWidgetAreaVG.setVisibility(View.GONE);
 			findViewById(R.id.default_text_fulltime_very_small).setVisibility(
 					View.GONE);
