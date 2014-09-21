@@ -22,6 +22,11 @@
             android:title="@string/pref_phone_controls_speaker"
             android:summary="@string/pref_phone_controls_speaker_summary"
             android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="pref_gyroscope_enabled"
+            android:title="@string/pref_gyroscope_enabled"
+            android:summary="@string/pref_gyroscope_enabled_summary"
+            android:defaultValue="false" />
     </PreferenceCategory>
 
     <PreferenceCategory

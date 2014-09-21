@@ -1,6 +1,6 @@
 package org.durka.hallmonitor_framework_test;
 
-import android.app.Activity;
+
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -10,9 +10,6 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.media.AudioManager;
 import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.SystemClock;
 import android.provider.ContactsContract;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
@@ -21,13 +18,9 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class ComponentPhone extends ComponentFramework.Layout
         implements ComponentFramework.OnPreviewComponentListener, ComponentFramework.OnPauseResumeListener,
@@ -95,8 +88,6 @@ public class ComponentPhone extends ComponentFramework.Layout
 
     protected boolean onOpenComponent() {
         Log_d(LOG_TAG, "onOpenComponent");
-
-        int bgColor = getPrefInt("pref_default_bgcolor", 0xff000000);
 
         if (!isPhoneShow() && mPreviewMode)
             preview();
@@ -201,7 +192,11 @@ public class ComponentPhone extends ComponentFramework.Layout
     }
 
     protected void setGyroscopeListener(boolean enabled) {
-        Log_d(LOG_TAG, "setGyroscopeListener: " + enabled);
+        boolean useGyroscope = getPrefBoolean("pref_gyroscope_enabled", true);
+        Log_d(LOG_TAG, "setGyroscopeListener: " + enabled + ", " + useGyroscope);
+
+        if (!useGyroscope)
+            return;
 
         if (enabled)
             ViewCoverService.registerOnGyroscopeChangedListener(this);
@@ -404,6 +399,7 @@ public class ComponentPhone extends ComponentFramework.Layout
             sendHangUp();
 
         // cleanup intent & set invisible
+        setPhoneShow(false);
         setVisibility(INVISIBLE);
     }
 
@@ -675,6 +671,7 @@ public class ComponentPhone extends ComponentFramework.Layout
                     }
 
                     setGyroscopeListener(false);
+                    startScreenOffTimer();
                     break;
                 case TelephonyManager.CALL_STATE_OFFHOOK:
                     Log_d(LOG_TAG, "onCallStateChanged: off hook");

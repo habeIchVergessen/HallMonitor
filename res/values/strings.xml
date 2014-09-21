@@ -73,6 +73,8 @@
     <string name="pref_phone_controls_tts_delay_summary">Delay before speaking the caller ID of incoming calls.</string>
     <string name="pref_phone_controls_speaker">Speaker Enable</string>
     <string name="pref_phone_controls_speaker_summary">suppress headset check</string>
+    <string name="pref_gyroscope_enabled">enable gyroscope while a call</string>
+    <string name="pref_gyroscope_enabled_summary">use this option, if not provided by operating system by default</string>
     <string name="pref_phone_preview_summary">Enter a number and verify your setup.</string>
     <string name="pref_phone_preview_input_message">enter a number</string>
     

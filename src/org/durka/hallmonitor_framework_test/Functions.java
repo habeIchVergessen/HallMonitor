@@ -16,35 +16,24 @@ package org.durka.hallmonitor_framework_test;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningServiceInfo;
-import android.app.Notification;
-import android.app.NotificationManager;
 import android.app.admin.DevicePolicyManager;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
-import android.service.notification.StatusBarNotification;
 import android.util.Log;
-import android.view.View;
-import android.view.WindowManager;
-import android.widget.GridView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 /**
@@ -165,7 +154,7 @@ public class Functions {
 				@Override
 				public void run() {	
 					Log_d(LOG_TAG + ".rearmScreenOffTimer", "Locking screen now.");
-					dpm.lockNow();
+                    dpm.lockNow();
 					//FIXME Would it be better to turn the screen off rather than actually locking
 					//presumably then it will auto lock as per phone configuration
 					//I can't work out how to do it though!
@@ -190,7 +179,10 @@ public class Functions {
             //needed to let us wake the screen
             PowerManager pm  = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
 
-            if (!pm.isScreenOn()) {
+            boolean isScreenOn = pm.isScreenOn();
+            Log_d(LOG_TAG, "wakeUpScreen: " + isScreenOn);
+
+            if (!isScreenOn) {
                 Log_d(LOG_TAG, "wakeUpScreen");
                 //FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
                 PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, ctx.getString(R.string.app_name));

@@ -16,13 +16,8 @@ package org.durka.hallmonitor_framework_test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.sql.Time;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Scanner;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -36,11 +31,9 @@ import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.WindowManager;
 
 public class ViewCoverService extends Service implements SensorEventListener, TextToSpeech.OnInitListener {

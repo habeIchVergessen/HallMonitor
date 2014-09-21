@@ -1,26 +1,15 @@
 package org.durka.hallmonitor_framework_test;
 
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Matrix;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.PowerManager;
-import android.preference.PreferenceManager;
 import android.telephony.TelephonyManager;
-import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class ComponentTestActivity extends ComponentFramework.Activity
         implements ComponentFramework.OnScreenOffTimerListener , ComponentFramework.OnWakeUpScreenListener , ComponentFramework.OnKeepOnScreen
@@ -161,11 +150,14 @@ public class ComponentTestActivity extends ComponentFramework.Activity
     /**
      * implement OnWakeUpScreenListener
      */
+    @SuppressWarnings("deprecation")
     public void onWakeUpScreen() {
         PowerManager pm  = (PowerManager) getApplicationContext().getSystemService(Context.POWER_SERVICE);
 
-        if (!pm.isScreenOn()) {
-            Log_d(LOG_TAG, "wakeUpScreen");
+        boolean isScreenOn = pm.isScreenOn();
+        Log_d(LOG_TAG, "wakeUpScreen: " + isScreenOn);
+
+        if (!isScreenOn) {
             //FIXME Would be nice to remove the deprecated FULL_WAKE_LOCK if possible
             PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, getApplicationContext().getString(R.string.app_name_framework));
             wl.acquire();
@@ -241,11 +233,10 @@ public class ComponentTestActivity extends ComponentFramework.Activity
                 Log_d(LOG_TAG + ".onReceive", "ACTION_PHONE_STATE_CHANGED = " + mIsActivityPaused + ", " + phoneExtraState);
                 // give ComponentPhone a chance to handle the call
                 if (mIsActivityPaused && phoneExtraState.equals(TelephonyManager.EXTRA_STATE_RINGING)) {
-//                    onKeepOnScreen(getContainer().getApplicationState(), 100);
+//                    onKeepOnScreen(getContainer().getApplicationState(), 500);
                     onWakeUpScreen();
                 }
             }
         }
     };
-
 }

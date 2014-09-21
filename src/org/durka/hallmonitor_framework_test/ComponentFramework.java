@@ -433,7 +433,6 @@ public class ComponentFramework {
             if (getActivity() != null && getActivity().getIntent() != null && getActivity().getIntent().getExtras() != null) {
                 mApplicationState = getActivity().getIntent().getExtras();
                 Log_d(LOG_TAG, "initApplicationState: restore prior application state #" + mApplicationState.size());
-                dumpApplicationState();
             }
 
             Log_d(LOG_TAG, "initApplicationState: " + mApplicationState.getBoolean("phoneWidgetShow", false) + ", " + mApplicationState.getBoolean("phoneWidgetRestartForced", false));
@@ -722,8 +721,9 @@ public class ComponentFramework {
             }
 
             // save application state to intent extras
-            Log_d(LOG_TAG, "onPause: save in intent extras");
-            getActivity().getIntent().putExtras(getApplicationState());
+            Log_d(LOG_TAG, "onPause: save in intent extras #" + getApplicationState().size());
+
+            getActivity().getIntent().replaceExtras(getApplicationState());
         }
 
         public void onStop() {
