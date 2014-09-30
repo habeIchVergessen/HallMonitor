@@ -31,6 +31,8 @@ import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.PowerManager;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -46,6 +48,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
     private static boolean globalCoverState = false;
     private CoverThread coverThread = null;
     private RestartThread restartThread = null;
+    private PartialWakeLookThread partialWakeLookThread = null;
 
     private ComponentFramework.OnCoverStateChangedListener mOnCoverStateChangedListener = null;
     private HashMap<String,ComponentFramework.OnGyroscopeChangedListener> mOnGyroscopeChangedListener = new HashMap<String,ComponentFramework.OnGyroscopeChangedListener>();
@@ -327,6 +330,8 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 
             // step 3: reset touch screen sensitivity
             startTouchScreenCoverThread(false);
+
+            stopPartialWakeLockThread();
         }
 
         if (globalCoverState) {
@@ -337,8 +342,10 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
             startTouchScreenCoverThread(true);
 
             // start activity
-            if (mOnCoverStateChangedListener == null)
+            if (mOnCoverStateChangedListener == null) {
+                startPartialWakeLockThread();
                 restartFrameworkTest(null);
+            }
         }
     }
 
@@ -360,6 +367,26 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
             result = globalCoverState;
 
         return result;
+    }
+
+    private void startPartialWakeLockThread() {
+        Log_d(LOG_TAG, "startPartialWakeLockThread: ");
+
+        stopPartialWakeLockThread();
+
+        partialWakeLookThread = new PartialWakeLookThread(this, 750);
+        partialWakeLookThread.start();
+    }
+
+    private void stopPartialWakeLockThread() {
+        if (partialWakeLookThread != null) {
+            Log_d(LOG_TAG, "stopPartialWakeLockThread: ");
+
+            if (partialWakeLookThread.isAlive())
+                partialWakeLookThread.interrupt();
+
+            partialWakeLookThread = null;
+        }
     }
 
     private synchronized void registerOnCoverStateChangedListenerPrivate(ComponentFramework.OnCoverStateChangedListener onCoverStateChangedListener) {
@@ -563,6 +590,43 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
                 Functions.Actions.setTouchScreenCoverMode(getApplicationContext(), mCoverMode);
             } catch (Exception e) {
                 Log.e(LOG_TAG, "run: exception occurred! " + e.getMessage());
+            }
+        }
+    }
+
+    private class PartialWakeLookThread extends Thread {
+        private final String LOG_TAG = "PartialWakeLockThread";
+        private Context mContext = null;
+        private long mTimeout = 0;
+
+        /**
+         *
+         * @param context
+         * @param timeout in ms
+         */
+        public PartialWakeLookThread(final Context context, long timeout) {
+            mContext = context;
+            mTimeout = timeout;
+        }
+
+        @Override
+        public void run() {
+            try {
+                PowerManager pm  = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+                PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, mContext.getString(R.string.app_name));
+
+                long start = System.currentTimeMillis();
+                try {
+                    wl.acquire();
+                    synchronized (this) {
+                        sleep(mTimeout);
+                    }
+                } finally {
+                    Log_d(LOG_TAG, "release wakeLock after " + (System.currentTimeMillis() - start) + " (" + mTimeout + ") ms");
+                    wl.release();
+                }
+            } catch (Exception e) {
+                Log.e(LOG_TAG, "exception occurred! " + e.getMessage());
             }
         }
     }

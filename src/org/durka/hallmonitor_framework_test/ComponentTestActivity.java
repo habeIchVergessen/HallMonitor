@@ -18,7 +18,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity
     private final String LOG_TAG = "ComponentTestActivity";
 
     private boolean mIsActivityPaused = true;
-    private boolean mOnWakeUpScreenCalled = false;
+    private boolean mOnWakeUpScreenCalled = true;
 
     @Override
     protected void onCreate(Bundle saveInstanceState) {
