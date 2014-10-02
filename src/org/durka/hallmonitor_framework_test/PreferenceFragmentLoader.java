@@ -16,7 +16,6 @@ package org.durka.hallmonitor_framework_test;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -25,6 +24,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
@@ -35,11 +35,12 @@ import android.preference.PreferenceScreen;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
-import android.view.KeyEvent;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Toast;
+
+import java.io.File;
+import java.lang.annotation.Target;
 
 public class PreferenceFragmentLoader extends PreferenceFragment  implements SharedPreferences.OnSharedPreferenceChangeListener {
     private final String LOG_TAG = "PreferenceFragmentLoader";
@@ -88,6 +89,17 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
                         mAboutClicked = 0;
                         SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
                         mDebug = !prefs.getBoolean("pref_dev_opts_debug", false); // toggle debug
+
+                        if (!mDebug && prefs.getBoolean("pref_write_logcat_output", false)) {
+                            File logcat = Logcat.writeOutput(getActivity().getBaseContext().getPackageName());
+
+                            if (logcat != null && logcat.exists()) {
+                                Toast.makeText(getActivity(), "wrote logcat output to '" + logcat.getAbsolutePath() + "'", Toast.LENGTH_LONG).show();
+                                // rescan media cache to show file via mtp
+                                getActivity().sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(logcat)));
+                            }
+                        }
+
                         prefs.edit().putBoolean("pref_dev_opts_debug", mDebug).commit();
                         Toast.makeText(getActivity(), "debug is " + (prefs.getBoolean("pref_dev_opts_debug", false) ? "enabled" : "disabled") + " now!", Toast.LENGTH_LONG).show();
                     }
@@ -99,6 +111,8 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
             // mask text as disabled
             about.setTitle(getTextDisabledFormatted(about.getTitle()));
             about.setSummary(getTextDisabledFormatted(about.getSummary()));
+
+            enableLogcat(prefs);
         }
 
         // phone control
@@ -245,6 +259,8 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
         // preferences_widget
         } else if (key.equals("prefDefaultLayoutClassName")) {
             updateDefaultView(prefs);
+        } else if (key.equals("pref_dev_opts_debug")) {
+            enableLogcat(prefs);
         }
 
         // phone control
@@ -276,6 +292,27 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
             phoneControl.setEnabled(phoneControlState);
         if (phoneControlConfig != (phoneControlState && prefs.getBoolean("pref_phone_controls_user", false)))
             prefs.edit().putBoolean("pref_phone_controls", !phoneControlConfig).commit();
+    }
+
+    private void enableLogcat(SharedPreferences prefs) {
+        boolean enabled = prefs.getBoolean("pref_dev_opts_debug", false);
+        Preference cbr = findPreference("pref_write_logcat_output");
+
+        if (!enabled && cbr != null) {
+            prefs.edit().putBoolean(cbr.getKey(), false).commit();
+            getPreferenceScreen().removePreference(cbr);
+        }
+
+        if (enabled && cbr == null){
+            Preference pAbout = findPreference("pref_about");
+            cbr = new CheckBoxPreference(getActivity());
+            cbr.setKey("pref_write_logcat_output");
+            cbr.setDefaultValue(false);
+            cbr.setTitle("logcat to sdcard");
+            cbr.setSummary("while disabling debug write logcat output to sdcard");
+            cbr.setOrder(pAbout.getOrder() - 1);
+            getPreferenceScreen().addPreference(cbr);
+        }
     }
 
     private void Log_d(String tag, String message) {

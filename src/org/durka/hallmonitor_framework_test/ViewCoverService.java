@@ -374,7 +374,7 @@ public class ViewCoverService extends Service implements SensorEventListener, Te
 
         stopPartialWakeLockThread();
 
-        partialWakeLookThread = new PartialWakeLookThread(this, 750);
+        partialWakeLookThread = new PartialWakeLookThread(this, 1000);
         partialWakeLookThread.start();
     }
 
