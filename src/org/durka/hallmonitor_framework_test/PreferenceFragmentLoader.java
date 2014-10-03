@@ -91,7 +91,7 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
                         mDebug = !prefs.getBoolean("pref_dev_opts_debug", false); // toggle debug
 
                         if (!mDebug && prefs.getBoolean("pref_write_logcat_output", false)) {
-                            File logcat = Logcat.writeOutput(getActivity().getBaseContext().getPackageName());
+                            File logcat = Logcat.writeOutput(getActivity().getBaseContext().getPackageName(), prefs);
 
                             if (logcat != null && logcat.exists()) {
                                 Toast.makeText(getActivity(), "wrote logcat output to '" + logcat.getAbsolutePath() + "'", Toast.LENGTH_LONG).show();

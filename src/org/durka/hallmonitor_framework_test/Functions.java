@@ -82,10 +82,10 @@ public class Functions {
             //if we are running in root enabled mode then lets up the sensitivity on the view screen
             //so we can use the screen through the window
             if (PreferenceManager.getDefaultSharedPreferences(ctx).getBoolean("pref_runasroot", false)) {
-                Log_d(LOG_TAG, "setTouchScreenCoverMode: " + coverMode);
+                Log_d(LOG_TAG + ".setTouchScreenCoverMode", "coverMode: " + coverMode);
 
                 if (coverMode) {
-                    Log_d(LOG_TAG + "setTouchScreenCoverMode", "We're root enabled so lets boost the sensitivity... (Build.Device: '" + Build.DEVICE + "')");
+                    Log_d(LOG_TAG + ".setTouchScreenCoverMode", "We're root enabled so lets boost the sensitivity... (Build.Device: '" + Build.DEVICE + "')");
 
                     if (Build.DEVICE.equals(DEV_SERRANO_LTE_CM10) || Build.DEVICE.equals(DEV_SERRANO_LTE_CM11) ||
                         Build.DEVICE.equals(DEV_SERRANO_DS_CM10) || Build.DEVICE.equals(DEV_SERRANO_DS_CM11) ||
@@ -98,9 +98,9 @@ public class Functions {
                     } else // others devices
                         run_commands_as_root(new String[]{"echo clear_cover_mode,1 > /sys/class/sec/tsp/cmd"});
 
-                    Log_d(LOG_TAG + "setTouchScreenCoverMode", "...Sensitivity boosted, hold onto your hats!");
+                    Log_d(LOG_TAG + ".setTouchScreenCoverMode", "...Sensitivity boosted, hold onto your hats!");
                 } else {
-                    Log_d(LOG_TAG + "setTouchScreenCoverMode", "We're root enabled so lets revert the sensitivity...");
+                    Log_d(LOG_TAG + ".setTouchScreenCoverMode", "We're root enabled so lets revert the sensitivity...");
 
                     if (Build.DEVICE.equals(DEV_SERRANO_LTE_CM10) || Build.DEVICE.equals(DEV_SERRANO_LTE_CM11) ||
                         Build.DEVICE.equals(DEV_SERRANO_DS_CM10) || Build.DEVICE.equals(DEV_SERRANO_DS_CM11) ||
@@ -113,7 +113,7 @@ public class Functions {
                     } else // others devices
                         run_commands_as_root(new String[]{"echo clear_cover_mode,0 > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result"});
 
-                    Log_d(LOG_TAG + "setTouchScreenCoverMode", "...Sensitivity reverted, sanity is restored!");
+                    Log_d(LOG_TAG + ".setTouchScreenCoverMode", "...Sensitivity reverted, sanity is restored!");
                 }
             }
         }

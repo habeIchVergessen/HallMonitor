@@ -1,6 +1,9 @@
 package org.durka.hallmonitor_framework_test;
 
+import android.content.SharedPreferences;
 import android.media.MediaScannerConnection;
+import android.os.Build;
+import android.preference.Preference;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -12,6 +15,7 @@ import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * Created by habeIchVergessen on 02.10.2014.
@@ -19,6 +23,10 @@ import java.util.Date;
 public class Logcat {
 
     public static File writeOutput(String packageName) {
+        return writeOutput(packageName, null);
+    }
+
+    public static File writeOutput(String packageName, SharedPreferences prefs) {
         String[] mPackageNames = packageName.split("(\\.|_)");
 
         String mOutputName = "Logcat_";
@@ -49,6 +57,25 @@ public class Logcat {
             outFile.createNewFile();
 
             OutputStreamWriter out = new OutputStreamWriter(new FileOutputStream(outFile));
+
+            // build info's
+            out.write("hardware: " + Build.MANUFACTURER + " " + Build.MODEL + " (" + Build.DEVICE + ")\n");
+            out.write("build:    " + getBuildInfo() + "\n");
+            out.write("os:       " + Build.DISPLAY + " (" + System.getProperty("java.vm.name") + ")\n");
+            out.write("kernel:   " + System.getProperty("os.version") + "\n");
+            out.write("\n");
+
+            // prefs
+            if (prefs != null) {
+                Map<String,?> keys = prefs.getAll();
+
+                out.write("preferences:\n");
+                for(Map.Entry<String,?> entry : keys.entrySet()) {
+                    out.write("   " + entry.getKey() + " = '" + entry.getValue().toString() + "'\n");
+                }
+                out.write("\n");
+            }
+
             for (int i=0; i < log.size(); i++)
                 if (!log.get(i).isEmpty())
                     out.write(log.get(i));
@@ -76,15 +103,44 @@ public class Logcat {
             Process process = Runtime.getRuntime().exec( commandLine.toArray( new String[commandLine.size()]));
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()), 1024);
 
-            String line, match = ".*\\(\\ {0,9}" + android.os.Process.myPid() + "\\):.*";
+            String line;
+            String matchAnyPid = ".*\\(\\ {0,9}\\d{1,}\\):.*";
+            //String matchPid = ".*\\(\\ {0,9}" + android.os.Process.myPid() + "\\):.*";
+            String matchPid = ".*\\(" + String.format("%5s", android.os.Process.myPid()) + "\\):.*";
+            boolean pidMatched = false;
             while ((line = bufferedReader.readLine()) != null) {
-                if (line.matches(match))
+                if (!pidMatched && line.matches(matchPid))
+                    pidMatched = true;
+                else if (pidMatched && line.matches(matchAnyPid) && !line.matches(matchPid))
+                    pidMatched = false;
+
+                if (pidMatched)
                     log.add(line + "\n");
             }
-        } catch ( IOException e) {
+        } catch (IOException e) {
             Log.e("Logcat", "getOutput: execption occurred: " + e.getMessage());
         }
 
         return log;
+    }
+
+    private static String getBuildInfo() {
+        String buildInfo = null;
+
+        try {
+            ArrayList<String> commandLine = new ArrayList<String>();
+            commandLine.add("getprop");
+            commandLine.add("ro.cm.display.version");
+            Process process = Runtime.getRuntime().exec(commandLine.toArray(new String[commandLine.size()]));
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()), 1024);
+
+            buildInfo = bufferedReader.readLine();
+        } catch (IOException e) {
+        } finally {
+            if (buildInfo == null)
+                buildInfo = Build.DEVICE + " " + new Date(Build.TIME);
+        }
+
+        return buildInfo;
     }
 }
