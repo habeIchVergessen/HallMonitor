@@ -26,6 +26,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.CheckBoxPreference;
@@ -40,6 +41,9 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Toast;
+
+import java.io.File;
+
 import eu.chainfire.libsuperuser.Shell;
 
 public class PreferenceFragmentLoader extends PreferenceFragment implements
@@ -104,6 +108,15 @@ public class PreferenceFragmentLoader extends PreferenceFragment implements
 						mDebug = !prefs
 								.getBoolean("pref_dev_opts_debug", false); // toggle
 																			// debug
+                        if (!mDebug && prefs.getBoolean("pref_write_logcat_output", false)) {
+                            File logcat = Logcat.writeOutput(getActivity().getBaseContext(), prefs);
+
+                            if (logcat != null && logcat.exists()) {
+                                Toast.makeText(getActivity(), "wrote logcat output to '" + logcat.getAbsolutePath() + "'", Toast.LENGTH_LONG).show();
+                                // rescan media cache to show file via mtp
+                                getActivity().sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(logcat)));
+                            }
+                        }
 						prefs.edit().putBoolean("pref_dev_opts_debug", mDebug)
 								.commit();
 						Toast.makeText(
@@ -122,6 +135,8 @@ public class PreferenceFragmentLoader extends PreferenceFragment implements
 			// mask text as disabled
 			about.setTitle(getTextDisabledFormatted(about.getTitle()));
 			about.setSummary(getTextDisabledFormatted(about.getSummary()));
+
+            enableLogcat(getPreferenceManager().getSharedPreferences());
 		}
 	}
 
@@ -393,9 +408,9 @@ public class PreferenceFragmentLoader extends PreferenceFragment implements
 		else if (key.equals("pref_phone_controls_tts_delay")) {
 			updatePhoneControlTtsDelay(prefs);
 
-		}
-
-		;
+		} else if (key.equals("pref_dev_opts_debug")) {
+            enableLogcat(prefs);
+        }
 
 		// Special case of restart
 		if (key.equals("pref_force_restart")) {
@@ -456,7 +471,28 @@ public class PreferenceFragmentLoader extends PreferenceFragment implements
 		}
 	}
 
-	private void setSystemApp(SharedPreferences prefs) {
+    private void enableLogcat(SharedPreferences prefs) {
+        boolean enabled = prefs.getBoolean("pref_dev_opts_debug", false);
+        Preference cbr = findPreference("pref_write_logcat_output");
+
+        if (!enabled && cbr != null) {
+            prefs.edit().putBoolean(cbr.getKey(), false).commit();
+            getPreferenceScreen().removePreference(cbr);
+        }
+
+        if (enabled && cbr == null){
+            Preference pAbout = findPreference("pref_about");
+            cbr = new CheckBoxPreference(getActivity());
+            cbr.setKey("pref_write_logcat_output");
+            cbr.setDefaultValue(false);
+            cbr.setTitle("logcat to sdcard");
+            cbr.setSummary("while disabling debug write logcat output to sdcard");
+            cbr.setOrder(pAbout.getOrder() - 1);
+            getPreferenceScreen().addPreference(cbr);
+        }
+    }
+
+    private void setSystemApp(SharedPreferences prefs) {
 		if (mStateManager.getSystemApp()) {
 			if (findPreference("pref_internal_power_management") != null) {
 				findPreference("pref_internal_power_management").setEnabled(
