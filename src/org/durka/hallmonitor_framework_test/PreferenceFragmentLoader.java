@@ -55,6 +55,8 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
         
         Log_d(LOG_TAG, "PFL-oC");
 
+        SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
+
         try {
             final String resourceName = getArguments().getString("resource", "");
             Log_d(LOG_TAG, "loading preferences from " + resourceName + ".xml");
@@ -62,7 +64,7 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
             Context context = getActivity().getApplicationContext();
 
             // debug
-            mDebug = getPreferenceManager().getSharedPreferences().getBoolean("pref_dev_opts_debug", mDebug);
+            mDebug = prefs.getBoolean("pref_dev_opts_debug", mDebug);
             final int resourceId = context.getResources().getIdentifier(resourceName, "xml", context.getPackageName());
 
             PreferenceManager.setDefaultValues(getActivity(), resourceId, false);
@@ -75,7 +77,6 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
         }
 
         // setup about preference for debug
-        SharedPreferences prefs = getPreferenceManager().getSharedPreferences();
         Preference about = findPreference("pref_about");
         if (about != null) {
             // init onClick listener
@@ -91,7 +92,7 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
                         mDebug = !prefs.getBoolean("pref_dev_opts_debug", false); // toggle debug
 
                         if (!mDebug && prefs.getBoolean("pref_write_logcat_output", false)) {
-                            File logcat = Logcat.writeOutput(getActivity().getBaseContext().getPackageName(), prefs);
+                            File logcat = Logcat.writeOutput(getActivity().getBaseContext(), prefs);
 
                             if (logcat != null && logcat.exists()) {
                                 Toast.makeText(getActivity(), "wrote logcat output to '" + logcat.getAbsolutePath() + "'", Toast.LENGTH_LONG).show();
