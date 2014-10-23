@@ -157,12 +157,19 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
 
         prefs.registerOnSharedPreferenceChangeListener(this);
 
-        prefs.edit()
-            .putBoolean("pref_enabled", Functions.Is.service_running(getActivity().getBaseContext(), ViewCoverService.class))
-            .putBoolean("pref_do_notifications", Functions.Is.service_running(getActivity().getBaseContext(), NotificationService.class))
-            .putBoolean("pref_default_widget", Functions.Is.widget_enabled(getActivity(), "default"))
-            .putBoolean("pref_media_widget", Functions.Is.widget_enabled(getActivity(), "media"))
-            .commit();
+        String currPref = "";
+        try {
+            currPref = "pref_enabled";
+            prefs.edit().putBoolean("pref_enabled", Functions.Is.service_running(getActivity().getBaseContext(), ViewCoverService.class)).commit();
+            currPref = "pref_do_notifications";
+            prefs.edit().putBoolean("pref_do_notifications", Functions.Is.service_running(getActivity().getBaseContext(), NotificationService.class)).commit();
+            currPref = "pref_default_widget";
+            prefs.edit().putBoolean("pref_default_widget", Functions.Is.widget_enabled(getActivity(), "default")).commit();
+            currPref = "pref_media_widget";
+            prefs.edit().putBoolean("pref_media_widget", Functions.Is.widget_enabled(getActivity(), "media")).commit();
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "onResume: exception occurred! pref = '" + currPref + "', error = " + e.toString());
+        }
 
         // phone control
         enablePhoneScreen(prefs);
