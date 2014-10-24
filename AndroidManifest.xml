@@ -102,7 +102,7 @@
             android:noHistory="true"
             android:screenOrientation="portrait"
             android:launchMode="singleTask"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
+            android:theme="@style/FullscreenTheme"
             android:excludeFromRecents="true">
             <intent-filter>
                 <action android:name="android.intent.action.HEADSET_PLUG" />

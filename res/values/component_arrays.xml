@@ -5,13 +5,10 @@
     <string-array name="defaultLayoutNames">
         <item>Default</item>
         <item>Custom 1</item>
-        <item>System</item>
     </string-array>
     <string-array name="defaultLayoutValues">
         <item ></item>
         <item >ComponentDefaultHabeIchVergessen</item>
-        <item >ComponentDefaultSystem</item>
     </string-array>
-
 
 </resources>

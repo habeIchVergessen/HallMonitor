@@ -63,6 +63,7 @@ public class Logcat {
 
         ArrayList<String> log = getOutput();
 
+        // TODO: get path from env (not working yet for cyanogenmod)
         String outDirName = "/storage/sdcard0/Download";
         File outFile = null;
         try {

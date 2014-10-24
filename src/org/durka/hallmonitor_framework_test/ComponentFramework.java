@@ -14,7 +14,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.AttributeSet;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -93,54 +92,6 @@ public class ComponentFramework {
             super.onCreate(saveInstanceState);
 
             mDebug = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_dev_opts_debug", false);
-            int bgColor = PreferenceManager.getDefaultSharedPreferences(this).getInt("pref_default_bgcolor", 0xFF000000);
-
-            Rect outer = new Rect();
-            getWindow().getWindowManager().getDefaultDisplay().getRectSize(outer);
-
-            Bitmap bitmap = Bitmap.createBitmap(outer.height(), outer.width(), Bitmap.Config.ARGB_8888);
-
-            Paint paint = new Paint();
-            paint.setColor(bgColor & 0x88FFFFFF);
-            paint.setAntiAlias(true);
-            paint.setStyle(Paint.Style.FILL);
-
-            Path path = new Path();
-            path.moveTo(outer.top, outer.left);
-            path.lineTo(outer.top, outer.right);
-            path.lineTo(outer.bottom, outer.right);
-
-            if (PreferenceManager.getDefaultSharedPreferences(this).getString("prefDefaultLayoutClassName", "").equals("ComponentDefaultSystem")) {
-                Rect inner = new Rect(40, 60, 200, 480);
-
-                path.lineTo(inner.bottom, inner.right);
-                path.lineTo(inner.top, inner.right);
-                path.lineTo(inner.top, inner.left);
-                path.lineTo(inner.bottom, inner.left);
-                path.lineTo(inner.bottom, inner.right);
-                path.lineTo(outer.bottom, outer.right);
-            }
-
-            path.lineTo(outer.bottom, outer.left);
-            path.close();
-
-            Canvas c = new Canvas(bitmap);
-            c.drawPath(path, paint);
-
-            paint.setColor(0x88FF0000);
-            paint.setStrokeWidth(2.0f);
-            paint.setStyle(Paint.Style.STROKE);
-
-            path.reset();
-            path.moveTo(outer.top, outer.left);
-            path.lineTo(outer.top, outer.right);
-            path.lineTo(outer.bottom, outer.right);
-            path.lineTo(outer.bottom, outer.left);
-            path.close();
-
-            c.drawPath(path, paint);
-
-            getWindow().setBackgroundDrawable(new BitmapDrawable(getResources(), bitmap));
         }
 
         @Override
@@ -522,7 +473,7 @@ public class ComponentFramework {
 
             try {
                 Log_d(LOG_TAG, "loading class: " + className);
-                Class<?> loadClass = Class.forName(this.getClass().getPackage().getName() + "." + className);
+                Class<?> loadClass = Class.forName(((Object) this).getClass().getPackage().getName() + "." + className);
 
                 if (Layout.class.isAssignableFrom(loadClass)) {
                     Constructor<?> loadConstructor = loadClass.getConstructor(Context.class, AttributeSet.class);
