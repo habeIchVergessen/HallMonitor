@@ -18,7 +18,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity
     private final String LOG_TAG = "ComponentTestActivity";
 
     private boolean mIsActivityPaused = true;
-    private boolean mOnWakeUpScreenCalled = true;
+    private boolean mOnWakeUpScreenCalled = false;
 
     @Override
     protected void onCreate(Bundle saveInstanceState) {
@@ -45,6 +45,13 @@ public class ComponentTestActivity extends ComponentFramework.Activity
 
         registerReceiver(receiver, intentFilter);
         ViewCoverService.registerOnCoverStateChangedListener(this);
+
+        // suppress screen on handling
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(this.TELEPHONY_SERVICE);
+        if (telephonyManager.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
+            Log_d(LOG_TAG, "onCreate: suppress screen on handling");
+            mOnWakeUpScreenCalled = true;
+        }
     }
 
     @Override

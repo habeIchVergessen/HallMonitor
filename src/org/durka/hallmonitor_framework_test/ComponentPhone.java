@@ -10,6 +10,7 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.provider.CallLog;
 import android.provider.ContactsContract;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
@@ -241,7 +242,18 @@ public class ComponentPhone extends ComponentFramework.Layout
 
             if (callState == TelephonyManager.CALL_STATE_RINGING || callState == TelephonyManager.CALL_STATE_OFFHOOK) {
                 Log_d(LOG_TAG, "initPhoneWidget: ringing/off hook detected");
-                final String incomingNumber = getIncomingNumber();
+                String incomingNumber = getIncomingNumber();
+
+                if (callState == TelephonyManager.CALL_STATE_OFFHOOK && (incomingNumber == null || incomingNumber.equals(""))) {
+                    String lastCall = CallLog.Calls.getLastOutgoingCall(getActivity());
+                    if (lastCall != null && !lastCall.equals("")) {
+                        Log_d(LOG_TAG, "getIncomingNumber: using getLastOutgoingCall() -> " + lastCall);
+
+                        incomingNumber = lastCall;
+                        // no text to speech
+                        setPhoneTtsNotified(true);
+                    }
+                }
 
                 Log_d(LOG_TAG, "initPhoneWidget: number = '" + incomingNumber + "'");
                 setPhoneShow(true);
@@ -254,6 +266,7 @@ public class ComponentPhone extends ComponentFramework.Layout
                     callAcceptedPhoneWidget(false);
                     setPhoneInitialized(true);
                     setGyroscopeListener(true);
+                    stopScreenOffTimer();
                 }
             }
         }
