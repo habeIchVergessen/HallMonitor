@@ -37,6 +37,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         // register receivers
         IntentFilter intentFilter = new IntentFilter();
@@ -63,7 +64,7 @@ public class ComponentTestActivity extends ComponentFramework.Activity
 
     @Override
     protected void onResume() {
-        Log_d(LOG_TAG, "onResume");
+        Log_d(LOG_TAG, "onResume: screen on ");
         mIsActivityPaused = false;
         onStartScreenOffTimer();
 

@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import android.content.Context;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.service.notification.NotificationListenerService;

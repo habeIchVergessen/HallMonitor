@@ -8,15 +8,15 @@
 <view
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:id="@+id/option_overlay"
     class="org.durka.hallmonitor_framework_test.ComponentFramework$MenuLayout"
     android:background="#CC000000">
 
     <!-- option 1 -->
     <ImageView
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="@dimen/menu_button_size"
+        android:layout_height="@dimen/menu_button_size"
         android:id="@+id/option_01"
         android:src="@drawable/ic_option_overlay_option1"
         android:focusable="false"
@@ -30,21 +30,21 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="40dp"
         android:clickable="false"
-        android:focusable="false">
+        android:focusable="false" >
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/spacer_2_3"
-            android:paddingRight="26dp"
-            android:paddingLeft="26dp"
             android:layout_centerHorizontal="true"
+            android:paddingLeft="26dp"
+            android:paddingRight="26dp"
+            android:id="@+id/spacer_2_3"
             android:clickable="false"
-            android:focusable="false"/>
+            android:focusable="false" />
 
         <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
             android:id="@+id/option_02"
             android:src="@drawable/ic_option_overlay_option2"
             android:focusable="false"
@@ -52,8 +52,8 @@
             android:layout_toRightOf="@+id/spacer_2_3" />
 
         <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
             android:id="@+id/option_03"
             android:src="@drawable/ic_option_overlay_option3"
             android:focusable="false"
@@ -66,7 +66,6 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
         android:layout_marginTop="75dp"
         android:clickable="false"
         android:focusable="false">
@@ -82,8 +81,8 @@
             android:focusable="false" />
 
         <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
             android:id="@+id/option_04"
             android:src="@drawable/ic_option_overlay_option4"
             android:focusable="false"
@@ -91,8 +90,8 @@
             android:layout_toRightOf="@+id/spacer_4_5" />
 
         <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
             android:id="@+id/option_05"
             android:src="@drawable/ic_option_overlay_option5"
             android:focusable="false"
@@ -105,7 +104,6 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
         android:layout_marginTop="0dp"
         android:clickable="false"
         android:focusable="false">
@@ -121,8 +119,8 @@
             android:focusable="false" />
 
         <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
             android:id="@+id/option_06"
             android:src="@drawable/ic_option_overlay_option6"
             android:focusable="false"
@@ -130,8 +128,8 @@
             android:layout_toRightOf="@+id/spacer_6_7" />
 
         <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
             android:id="@+id/option_07"
             android:src="@drawable/ic_option_overlay_option7"
             android:focusable="false"
@@ -144,7 +142,6 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
         android:layout_marginTop="20dp"
         android:clickable="false"
         android:focusable="false">
@@ -160,8 +157,8 @@
             android:focusable="false" />
 
         <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
             android:id="@+id/option_08"
             android:src="@drawable/ic_option_overlay_option8"
             android:focusable="false"
@@ -169,8 +166,8 @@
             android:layout_toRightOf="@+id/spacer_8_9" />
 
         <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
             android:id="@+id/option_09"
             android:src="@drawable/ic_option_overlay_option9"
             android:focusable="false"

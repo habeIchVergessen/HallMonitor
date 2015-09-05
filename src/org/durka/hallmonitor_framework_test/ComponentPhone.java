@@ -10,6 +10,7 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.os.Build;
 import android.provider.CallLog;
 import android.provider.ContactsContract;
 import android.telephony.PhoneStateListener;
@@ -245,6 +246,7 @@ public class ComponentPhone extends ComponentFramework.Layout
                 String incomingNumber = getIncomingNumber();
 
                 if (callState == TelephonyManager.CALL_STATE_OFFHOOK && (incomingNumber == null || incomingNumber.equals(""))) {
+/* doesn't work properly yet
                     String lastCall = CallLog.Calls.getLastOutgoingCall(getActivity());
                     if (lastCall != null && !lastCall.equals("")) {
                         Log_d(LOG_TAG, "getIncomingNumber: using getLastOutgoingCall() -> " + lastCall);
@@ -253,6 +255,7 @@ public class ComponentPhone extends ComponentFramework.Layout
                         // no text to speech
                         setPhoneTtsNotified(true);
                     }
+*/
                 }
 
                 Log_d(LOG_TAG, "initPhoneWidget: number = '" + incomingNumber + "'");
@@ -487,15 +490,22 @@ public class ComponentPhone extends ComponentFramework.Layout
         if (mPreviewMode)
             return;
 
-        long millis = System.currentTimeMillis();
-        Intent intent = new Intent(Intent.ACTION_MEDIA_BUTTON);
-        KeyEvent keyEvent = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_HEADSETHOOK);
+        // KEYCODE_HEADSETHOOK doesn't work for lollipop
+        if (Build.VERSION.SDK_INT < 21) {
+            long millis = System.currentTimeMillis();
+            Intent intent = new Intent(Intent.ACTION_MEDIA_BUTTON);
+            KeyEvent keyEvent = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_HEADSETHOOK);
 
-        if (longPress)
-            keyEvent = KeyEvent.changeTimeRepeat(keyEvent, System.currentTimeMillis(), 1, KeyEvent.FLAG_LONG_PRESS);
+            if (longPress)
+                keyEvent = KeyEvent.changeTimeRepeat(keyEvent, millis, 1, KeyEvent.FLAG_LONG_PRESS);
 
-        intent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
-        getContext().sendOrderedBroadcast(intent, null);
+            intent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
+            getContext().sendOrderedBroadcast(intent, null);
+        } else
+            Functions.Actions.run_commands_as_root(new String[]{"input keyevent " + (!longPress ? "5" : "6")}, false);
+    }
+
+    private void sendKeyHeadSetHook(int keyEventAction, boolean longPress) {
     }
 
     /**
@@ -782,7 +792,7 @@ public class ComponentPhone extends ComponentFramework.Layout
         if (!isPhoneRestartForced() && ComponentFramework.OnKeepOnScreen.class.isAssignableFrom(getActivity().getClass())) {
             setPhoneRestartForced(true);
 
-            ((ComponentFramework.OnKeepOnScreen)getActivity()).onKeepOnScreen(getContainer().getApplicationState(), 50);
+            ((ComponentFramework.OnKeepOnScreen)getActivity()).onKeepOnScreen(getContainer().getApplicationState(), 200);
         }
     }
 }

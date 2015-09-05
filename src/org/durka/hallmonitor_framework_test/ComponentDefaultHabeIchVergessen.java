@@ -4,9 +4,12 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Typeface;
+import android.hardware.Camera;
 import android.media.AudioManager;
 import android.os.BatteryManager;
+import android.os.Build;
 import android.service.notification.StatusBarNotification;
 import android.telephony.TelephonyManager;
 import android.text.SpannableString;
@@ -17,13 +20,16 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextClock;
 
+import java.io.IOException;
+
 public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
         implements ComponentFramework.OnPauseResumeListener, ComponentFramework.MenuController.OnMenuActionListener,
-        NotificationService.OnNotificationChangedListener, ComponentFramework.OnGyroscopeChangedListener {
+        NotificationService.OnNotificationChangedListener, ComponentFramework.OnGyroscopeChangedListener, ComponentFramework.OnStopListener {
 
     private final String LOG_TAG = "ComponentDefaultHabeIchVergessen";
 
     private TextClock mDefaultTextClock = null;
+    private Camera mCamera;
 
     private final String TOGGLE_FLASHLIGHT = "net.cactii.flash2.TOGGLE_FLASHLIGHT";
 
@@ -64,6 +70,7 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
         if (NotificationService.registerOnNotificationChangedListener(this))
             onNotificationChanged();
 
+        (new GetCameraThread()).start();
         updateBatteryStatus();
     }
 
@@ -71,6 +78,12 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
         Log_d(LOG_TAG, "onPause");
 
         NotificationService.unregisterOnNotificationChangedListener(this);
+    }
+
+    public void onStop() {
+        Log_d(LOG_TAG, "onStop");
+
+        releaseCamera();
     }
 
     public int getMenuId() {
@@ -111,8 +124,9 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
                     break;
                 case R.id.torchbutton:
                     // read notifications for torch state
-                    option.setImageId(!NotificationService.isTorchOn() ? R.drawable.ic_appwidget_torch_off : R.drawable.ic_appwidget_torch_on);
+                    boolean torchOn = (Build.VERSION.SDK_INT < 21 ? NotificationService.isTorchOn() : isFlashOn());
 
+                    option.setImageId(!torchOn ? R.drawable.ic_appwidget_torch_off : R.drawable.ic_appwidget_torch_on);
                     break;
             }
         }
@@ -126,16 +140,28 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
 
         switch (menuOption.getOptionId()) {
             case R.id.camerabutton:
+                releaseCamera();
                 getContainer().getLayoutByResId(R.id.componentCamera).setVisibility(VISIBLE);
                 break;
             case R.id.torchbutton:
-                Intent intent = new Intent(TOGGLE_FLASHLIGHT);
-                intent.putExtra("strobe", false);
-                intent.putExtra("period", 100);
-                intent.putExtra("bright", false);
-                ((Activity)getContext()).sendBroadcast(intent);
+                boolean torchOn = false;
 
-                boolean torchOn = (menuOption.getImageId() == R.drawable.ic_appwidget_torch_off);
+                if (Build.VERSION.SDK_INT < 21) {
+                    Intent intent = new Intent(TOGGLE_FLASHLIGHT);
+                    intent.putExtra("strobe", false);
+                    intent.putExtra("period", 100);
+                    intent.putExtra("bright", false);
+                    ((Activity) getContext()).sendBroadcast(intent);
+
+                    torchOn = (menuOption.getImageId() == R.drawable.ic_appwidget_torch_off);
+                } else {
+                    if (!isFlashOn())
+                        turnFlashOn();
+                    else
+                        turnFlashOff();
+
+                    torchOn = isFlashOn();
+                }
 
                 menuOption.setImageId((torchOn ? R.drawable.ic_appwidget_torch_on : R.drawable.ic_appwidget_torch_off));
 
@@ -155,6 +181,7 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
                 break;
             case R.id.menu_test:
                 Log_d(LOG_TAG, "onMenuAction:\n" + getContainer().dumpBackStack());
+//                ((ComponentTestActivity)getActivity()).onShowComponentPhone(this);
                 break;
         }
     }
@@ -217,6 +244,97 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
             ((ComponentFramework.OnWakeUpScreenListener)getActivity()).onWakeUpScreen();
     }
 
+    private void releaseCamera() {
+        Log_d(LOG_TAG, "releaseCamera");
+        if (mCamera != null) {
+            mCamera.release();
+            mCamera = null;
+        }
+    }
+
+    private void unlockCamera() {
+        Log_d(LOG_TAG, "unlockCamera");
+        if (mCamera != null)
+            try {
+                mCamera.unlock();
+            } catch (RuntimeException e) {
+                Log_d(LOG_TAG, "unlockCamera: RuntimeException: " + e.getMessage());
+                mCamera = null;
+            }
+    }
+
+    private synchronized Camera getCamera() {
+        Log_d(LOG_TAG, "getCamera");
+        try {
+            if (mCamera == null)
+                mCamera = Camera.open();
+            else
+                mCamera.reconnect();
+        } catch (RuntimeException e) {
+            Log_d(LOG_TAG, "getCamera: RuntimeException: " + e.getMessage());
+            mCamera = null;
+        } catch (IOException e) {
+            Log_d(LOG_TAG, "getCamera: IOException: " + e.getMessage());
+            releaseCamera();
+        }
+
+        return mCamera;
+    }
+
+    private Camera.Parameters getCameraParameter() throws RuntimeException {
+        Camera camera = getCamera();
+
+        return (camera != null ? camera.getParameters() : null);
+    }
+
+    private boolean hasFlashSupport() {
+        return getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
+    }
+
+    private boolean isFlashOn() {
+        String flashMode = null;
+
+        try {
+            Camera.Parameters params = getCameraParameter();
+            flashMode = (params != null ? params.getFlashMode() : null);
+            unlockCamera();
+        } catch (RuntimeException e) {
+            Log_d(LOG_TAG, "isFlashOn: " + e.getMessage());
+        }
+
+        return (Camera.Parameters.FLASH_MODE_TORCH.equals(flashMode));
+    }
+
+    private void turnFlashOn() {
+        Camera camera;
+
+        if ((camera = getCamera()) != null) {
+            Camera.Parameters params;
+
+            if ((params = camera.getParameters()) != null) {
+                params.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+                camera.setParameters(params);
+                camera.startPreview();
+                unlockCamera();
+            }
+        }
+    }
+
+    private void turnFlashOff() {
+        Camera camera;
+
+        if ((camera = getCamera()) != null) {
+            Camera.Parameters params;
+
+            if ((params = camera.getParameters()) != null) {
+                params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+                camera.setParameters(params);
+                camera.stopPreview();
+                unlockCamera();
+            }
+        }
+    }
+
     private void updateBatteryStatus() {
         Log_d(LOG_TAG, "updateBatteryStatus");
         if (findViewById(R.id.default_battery_picture) != null) {
@@ -228,6 +346,17 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
                 ((ImageView)findViewById(R.id.default_battery_picture)).setImageResource(R.drawable.stat_sys_battery);
             }
             ((ImageView)findViewById(R.id.default_battery_picture)).getDrawable().setLevel((int) (battery_status.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) / (float)battery_status.getIntExtra(BatteryManager.EXTRA_SCALE, -1) * 100));
+        }
+    }
+
+    private class GetCameraThread extends Thread {
+        private final String LOG_TAG = "GetCameraThread";
+        public GetCameraThread() {
+        }
+
+        @Override
+        public void run() {
+            getCamera();
         }
     }
 }

@@ -536,59 +536,68 @@ public class ComponentFramework {
                 mLayoutView.setVisibility(VISIBLE);
         }
 
-        private synchronized void moveOnTopOfBackStack(Layout layout) {
+        private void moveOnTopOfBackStack(Layout layout) {
             addToBackStack(layout, (!mBackStack.containsValue(layout) ? -1 : mBackStack.size() - 1));
         }
 
-        private synchronized void addToBackStack(Layout layout) {
+        private void addToBackStack(Layout layout) {
             addToBackStack(layout, -1);
         }
 
-        private synchronized void addToBackStack(Layout layout, int position) {
+        private void addToBackStack(Layout layout, int position) {
 //            Log.d(LOG_TAG, "addToBackStack: " + position + " (" + mBackStack.size() + "), " + layout.getClass().getName());
-            if (position < 0) {
-                mBackStack.put(mBackStack.size(), layout);
-            } else {
-                // resort list
-                if (mBackStack.containsValue(layout)) {
-                    int idx = 0;
-                    for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
-                        if (entry.getValue() != layout) {
+            synchronized (mBackStack) {
+                if (position < 0) {
+                    mBackStack.put(mBackStack.size(), layout);
+                } else {
+                    // resort list
+                    if (mBackStack.containsValue(layout)) {
+                        int idx = 0;
+                        HashMap<Integer, Layout> newBackStack = new HashMap<Integer, Layout>();
+
+                        for (Map.Entry<Integer, Layout> entry : mBackStack.entrySet()) {
+                            if (entry.getValue() != layout) {
+                                newBackStack.put(idx, entry.getValue());
+                                idx++;
+                            }
+                        }
+                        newBackStack.put(idx, layout);
+                        mBackStack = newBackStack;
+                        // insert at position
+                    } else {
+                        int idx = 0;
+                        for (Map.Entry<Integer, Layout> entry : mBackStack.entrySet()) {
+                            if (position == idx) {
+                                mBackStack.put(idx, layout);
+                                idx++;
+                            }
                             mBackStack.put(idx, entry.getValue());
                             idx++;
-                        } else
-                            mBackStack.remove(entry.getKey());
-                    }
-                    mBackStack.put(idx, layout);
-                // insert at position
-                } else {
-                    int idx = 0;
-                    for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
-                        if (position == idx) {
-                            mBackStack.put(idx, layout);
-                            idx++;
                         }
-                        mBackStack.put(idx, entry.getValue());
-                        idx++;
+                        // position out of range (move on top)
+                        if (!mBackStack.containsValue(layout))
+                            mBackStack.put(mBackStack.size(), layout);
                     }
-                    // position out of range (move on top)
-                    if (!mBackStack.containsValue(layout))
-                        mBackStack.put(mBackStack.size(), layout);
                 }
             }
 
             handleBackgroundColor();
         }
 
-        private synchronized void removeFromBackStack(Layout layout) {
+        private void removeFromBackStack(Layout layout) {
 //            Log.d(LOG_TAG, "removeFromBackStack: " + layout.getClass().getName());
             int idx = 0;
-            for (Map.Entry<Integer,Layout> entry : mBackStack.entrySet()) {
-                if (entry.getValue() != layout) {
-                    mBackStack.put(idx, entry.getValue());
-                    idx++;
-                } else
-                    mBackStack.remove(entry.getKey());
+            synchronized (mBackStack) {
+                HashMap<Integer, Layout> newBackStack = new HashMap<Integer, Layout>();
+
+                for (Map.Entry<Integer, Layout> entry : mBackStack.entrySet()) {
+                    if (entry.getValue() != layout) {
+                        newBackStack.put(idx, entry.getValue());
+                        idx++;
+                    }
+                }
+
+                mBackStack = newBackStack;
             }
 
             handleBackgroundColor();
@@ -602,8 +611,10 @@ public class ComponentFramework {
         public String dumpBackStack() {
             String result = "dumpBackStack:\n";
 
-            for (Integer key : mBackStack.keySet())
-                result += "key: '" + key + "' -> '" + mBackStack.get(key) + "'\n";
+            synchronized (mBackStack) {
+                for (Integer key : mBackStack.keySet())
+                    result += "key: '" + key + "' -> '" + mBackStack.get(key) + "'\n";
+            }
 
             return result;
         }
@@ -644,6 +655,7 @@ public class ComponentFramework {
 
         @Override
         final public void setDebugMode(boolean debugMode) {
+            Log_d(LOG_TAG, "setDebugMode: " + debugMode + " " + mDebug);
             if (mDebug == debugMode)
                 return;
             super.setDebugMode(debugMode);
@@ -1520,8 +1532,9 @@ public class ComponentFramework {
                             spacing = (int)(mButtonSize * 2.20f);
                             break;
                     }
-                    if (padding > 0)
+                    if (padding > 0) {
                         textView.setPadding(padding, 0, padding, 0);
+                    }
                     if (spacing > 0)
                         ((RelativeLayout.LayoutParams)layout.getLayoutParams()).setMargins(0, mOverlayLayout.getHeight() - spacing, 0, 0);
                 }
