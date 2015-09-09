@@ -24,12 +24,13 @@ import java.io.IOException;
 
 public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
         implements ComponentFramework.OnPauseResumeListener, ComponentFramework.MenuController.OnMenuActionListener,
-        NotificationService.OnNotificationChangedListener, ComponentFramework.OnGyroscopeChangedListener, ComponentFramework.OnStopListener {
+        NotificationService.OnNotificationChangedListener, ComponentFramework.OnGyroscopeChangedListener {
 
     private final String LOG_TAG = "ComponentDefaultHabeIchVergessen";
 
     private TextClock mDefaultTextClock = null;
     private Camera mCamera;
+    private Object mCameraSync = new Object();
 
     private final String TOGGLE_FLASHLIGHT = "net.cactii.flash2.TOGGLE_FLASHLIGHT";
 
@@ -70,19 +71,14 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
         if (NotificationService.registerOnNotificationChangedListener(this))
             onNotificationChanged();
 
-        (new GetCameraThread()).start();
         updateBatteryStatus();
+        (new GetCameraThread()).start();
     }
 
     public void onPause() {
         Log_d(LOG_TAG, "onPause");
 
         NotificationService.unregisterOnNotificationChangedListener(this);
-    }
-
-    public void onStop() {
-        Log_d(LOG_TAG, "onStop");
-
         releaseCamera();
     }
 
@@ -244,41 +240,29 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
             ((ComponentFramework.OnWakeUpScreenListener)getActivity()).onWakeUpScreen();
     }
 
-    private void releaseCamera() {
-        Log_d(LOG_TAG, "releaseCamera");
-        if (mCamera != null) {
-            mCamera.release();
-            mCamera = null;
-        }
-    }
-
-    private void unlockCamera() {
-        Log_d(LOG_TAG, "unlockCamera");
-        if (mCamera != null)
+    private Camera getCamera() {
+        Log_d(LOG_TAG, "getCamera");
+        synchronized (mCameraSync) {
             try {
-                mCamera.unlock();
+                if (mCamera == null)
+                    mCamera = Camera.open();
             } catch (RuntimeException e) {
-                Log_d(LOG_TAG, "unlockCamera: RuntimeException: " + e.getMessage());
+                Log_d(LOG_TAG, "getCamera: RuntimeException: " + e.getMessage());
                 mCamera = null;
             }
-    }
-
-    private synchronized Camera getCamera() {
-        Log_d(LOG_TAG, "getCamera");
-        try {
-            if (mCamera == null)
-                mCamera = Camera.open();
-            else
-                mCamera.reconnect();
-        } catch (RuntimeException e) {
-            Log_d(LOG_TAG, "getCamera: RuntimeException: " + e.getMessage());
-            mCamera = null;
-        } catch (IOException e) {
-            Log_d(LOG_TAG, "getCamera: IOException: " + e.getMessage());
-            releaseCamera();
         }
 
         return mCamera;
+    }
+
+    private void releaseCamera() {
+        Log_d(LOG_TAG, "releaseCamera");
+        synchronized (mCameraSync) {
+            if (mCamera != null) {
+                mCamera.release();
+                mCamera = null;
+            }
+        }
     }
 
     private Camera.Parameters getCameraParameter() throws RuntimeException {
@@ -297,7 +281,6 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
         try {
             Camera.Parameters params = getCameraParameter();
             flashMode = (params != null ? params.getFlashMode() : null);
-            unlockCamera();
         } catch (RuntimeException e) {
             Log_d(LOG_TAG, "isFlashOn: " + e.getMessage());
         }
@@ -315,7 +298,7 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
                 params.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
                 camera.setParameters(params);
                 camera.startPreview();
-                unlockCamera();
+                stopScreenOffTimer();
             }
         }
     }
@@ -330,7 +313,7 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
                 params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
                 camera.setParameters(params);
                 camera.stopPreview();
-                unlockCamera();
+                startScreenOffTimer();
             }
         }
     }
