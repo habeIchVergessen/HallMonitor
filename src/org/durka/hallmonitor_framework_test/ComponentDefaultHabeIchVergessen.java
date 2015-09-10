@@ -72,7 +72,6 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
             onNotificationChanged();
 
         updateBatteryStatus();
-        (new GetCameraThread()).start();
     }
 
     public void onPause() {
@@ -151,10 +150,13 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
 
                     torchOn = (menuOption.getImageId() == R.drawable.ic_appwidget_torch_off);
                 } else {
-                    if (!isFlashOn())
+                    if (!isFlashOn()) {
                         turnFlashOn();
-                    else
+                        stopScreenOffTimer();
+                    } else {
                         turnFlashOff();
+                        startScreenOffTimer();
+                    }
 
                     torchOn = isFlashOn();
                 }
@@ -241,11 +243,20 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
     }
 
     private Camera getCamera() {
+        return getCamera(false);
+    }
+
+    private Camera getCamera(boolean init) {
         Log_d(LOG_TAG, "getCamera");
+
+        if (!init)
+            return mCamera;
+
         synchronized (mCameraSync) {
             try {
-                if (mCamera == null)
+                if (mCamera == null) {
                     mCamera = Camera.open();
+                }
             } catch (RuntimeException e) {
                 Log_d(LOG_TAG, "getCamera: RuntimeException: " + e.getMessage());
                 mCamera = null;
@@ -261,14 +272,9 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
             if (mCamera != null) {
                 mCamera.release();
                 mCamera = null;
+                Log_d(LOG_TAG, "releaseCamera: released");
             }
         }
-    }
-
-    private Camera.Parameters getCameraParameter() throws RuntimeException {
-        Camera camera = getCamera();
-
-        return (camera != null ? camera.getParameters() : null);
     }
 
     private boolean hasFlashSupport() {
@@ -279,8 +285,13 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
         String flashMode = null;
 
         try {
-            Camera.Parameters params = getCameraParameter();
-            flashMode = (params != null ? params.getFlashMode() : null);
+            // without camera control torch state is not detectable (always false)
+            Camera camera = getCamera(false);
+
+            if (camera != null) {
+                Camera.Parameters params = camera.getParameters();
+                flashMode = (params != null ? params.getFlashMode() : null);
+            }
         } catch (RuntimeException e) {
             Log_d(LOG_TAG, "isFlashOn: " + e.getMessage());
         }
@@ -298,7 +309,6 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
                 params.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
                 camera.setParameters(params);
                 camera.startPreview();
-                stopScreenOffTimer();
             }
         }
     }
@@ -313,7 +323,6 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
                 params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
                 camera.setParameters(params);
                 camera.stopPreview();
-                startScreenOffTimer();
             }
         }
     }
@@ -329,17 +338,6 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
                 ((ImageView)findViewById(R.id.default_battery_picture)).setImageResource(R.drawable.stat_sys_battery);
             }
             ((ImageView)findViewById(R.id.default_battery_picture)).getDrawable().setLevel((int) (battery_status.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) / (float)battery_status.getIntExtra(BatteryManager.EXTRA_SCALE, -1) * 100));
-        }
-    }
-
-    private class GetCameraThread extends Thread {
-        private final String LOG_TAG = "GetCameraThread";
-        public GetCameraThread() {
-        }
-
-        @Override
-        public void run() {
-            getCamera();
         }
     }
 }
