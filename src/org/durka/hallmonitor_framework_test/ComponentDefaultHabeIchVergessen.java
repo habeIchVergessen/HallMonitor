@@ -243,7 +243,7 @@ public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
     }
 
     private Camera getCamera() {
-        return getCamera(false);
+        return getCamera(true);
     }
 
     private Camera getCamera(boolean init) {
