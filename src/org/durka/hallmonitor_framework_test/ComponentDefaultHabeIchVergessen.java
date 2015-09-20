@@ -11,7 +11,6 @@ import android.media.AudioManager;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
-import android.telephony.TelephonyManager;
 import android.text.SpannableString;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
@@ -19,8 +18,6 @@ import android.util.AttributeSet;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextClock;
-
-import java.io.IOException;
 
 public class ComponentDefaultHabeIchVergessen extends ComponentFramework.Layout
         implements ComponentFramework.OnPauseResumeListener, ComponentFramework.MenuController.OnMenuActionListener,

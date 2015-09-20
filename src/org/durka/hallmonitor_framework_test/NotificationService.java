@@ -15,6 +15,7 @@
 package org.durka.hallmonitor_framework_test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
@@ -107,15 +108,22 @@ public class NotificationService extends NotificationListenerService {
 	@Override
 	public StatusBarNotification[] getActiveNotifications() {
 		StatusBarNotification[] notifs = super.getActiveNotifications();
-		
-		List<StatusBarNotification> acc = new ArrayList<StatusBarNotification>(notifs.length);
+        StatusBarNotification sbn2 = null;
+        HashMap<String, StatusBarNotification> acc = new HashMap<String, StatusBarNotification>();
+
 		for (StatusBarNotification sbn : notifs) {
-//			Log_d("NS-gAN", sbn.getPackageName());
-			if (!blacklist.contains(sbn.getPackageName())) {
-				acc.add(sbn);
-			}
+            String packageName = sbn.getPackageName();
+//			Log_d("NS-gAN", packageName);
+
+			if (!blacklist.contains(packageName)) {
+                if ((sbn2 = acc.get(packageName)) == null)
+                    acc.put(packageName, sbn);
+                else
+                    sbn2.getNotification().number++;
+            }
 		}
-		return acc.toArray(new StatusBarNotification[acc.size()]);
+
+		return acc.values().toArray(new StatusBarNotification[acc.size()]);
 	}
 
     /**
