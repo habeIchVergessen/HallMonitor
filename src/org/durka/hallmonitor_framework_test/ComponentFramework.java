@@ -23,9 +23,11 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.lang.reflect.Constructor;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -111,6 +113,13 @@ public class ComponentFramework {
 
             boolean debug = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_dev_opts_debug", false);
 
+            // forward debug settings
+            Functions.setDebugMode(mDebug);
+            ViewCoverService.setDebugMode(mDebug);
+            HMAppWidgetManager.setDebugMode(mDebug);
+            NotificationAdapter.setDebugMode(mDebug);
+            NotificationService.setDebugMode(mDebug);
+
             // propagate to layout's
             if (getContainer() != null) {
                 if (debug != mDebug)
@@ -127,13 +136,6 @@ public class ComponentFramework {
             }
 
             mDebug = debug;
-
-            // forward debug settings
-            Functions.setDebugMode(mDebug);
-            ViewCoverService.setDebugMode(mDebug);
-            HMAppWidgetManager.setDebugMode(mDebug);
-            NotificationAdapter.setDebugMode(mDebug);
-            NotificationService.setDebugMode(mDebug);
         }
 
         @Override
@@ -1021,7 +1023,7 @@ public class ComponentFramework {
 
         private final int UNDEFINED_TOUCH_EVENT_ACTION_INDEX = -1;
         private int mOptionMenuTrack = UNDEFINED_TOUCH_EVENT_ACTION_INDEX;
-        private HashMap<Integer,ImageView> mOptionViews = new HashMap<Integer, ImageView>();
+        private LinkedHashMap<Integer,ImageView> mOptionViews = new LinkedHashMap<Integer, ImageView>();
 
         private int mBackgroundColor = 0xCC000000;
         private int mButtonSize = 52;
@@ -1054,7 +1056,7 @@ public class ComponentFramework {
         }
 
         public class Menu {
-            private HashMap<Integer,Integer> mMenuOptions = new HashMap<Integer, Integer>();
+            private LinkedHashMap<Integer,Integer> mMenuOptions = new LinkedHashMap<Integer, Integer>();
             private int mViewId;
 
             protected Menu(int viewId) {
@@ -1642,6 +1644,7 @@ public class ComponentFramework {
         }
 
         private boolean setupMenu(Menu menu) {
+            Log.d(LOG_TAG, "setupMenu: enter");
             int skipDisabled = 0;
 
             for (int idx=0; idx<mOptionViews.size(); idx++) {
@@ -1668,6 +1671,7 @@ public class ComponentFramework {
                     imageView.setImageDrawable(getResources().getDrawable(option.getImageId()));
             }
 
+            Log.d(LOG_TAG, "setupMenu: leave");
             return true;
         }
 

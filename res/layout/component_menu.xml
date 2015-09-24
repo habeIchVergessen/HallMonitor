@@ -8,7 +8,7 @@
 <view
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:id="@+id/option_overlay"
     class="org.durka.hallmonitor_framework_test.ComponentFramework$MenuLayout"
     android:background="#CC000000">
@@ -36,9 +36,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:id="@+id/spacer_2_3"
             android:paddingLeft="26dp"
             android:paddingRight="26dp"
-            android:id="@+id/spacer_2_3"
             android:clickable="false"
             android:focusable="false" />
 
@@ -59,7 +60,6 @@
             android:focusable="false"
             android:clickable="false"
             android:layout_toLeftOf="@+id/spacer_2_3" />
-
     </RelativeLayout>
 
     <!-- wrapper option 4 + 5 -->
@@ -68,15 +68,16 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="75dp"
         android:clickable="false"
-        android:focusable="false">
+        android:focusable="false" >
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
             android:id="@+id/spacer_4_5"
             android:paddingRight="63dp"
             android:paddingLeft="63dp"
-            android:layout_centerHorizontal="true"
             android:clickable="false"
             android:focusable="false" />
 
@@ -106,7 +107,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="0dp"
         android:clickable="false"
-        android:focusable="false">
+        android:focusable="false" >
 
         <TextView
             android:layout_width="wrap_content"
@@ -115,6 +116,7 @@
             android:paddingRight="5dp"
             android:paddingLeft="5dp"
             android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
             android:clickable="false"
             android:focusable="false" />
 
@@ -144,7 +146,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:clickable="false"
-        android:focusable="false">
+        android:focusable="false" >
 
         <TextView
             android:layout_width="wrap_content"
@@ -153,6 +155,7 @@
             android:paddingRight="60dp"
             android:paddingLeft="60dp"
             android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
             android:clickable="false"
             android:focusable="false" />
 
