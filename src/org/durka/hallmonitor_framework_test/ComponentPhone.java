@@ -2,6 +2,7 @@ package org.durka.hallmonitor_framework_test;
 
 
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -58,6 +59,8 @@ public class ComponentPhone extends ComponentFramework.Layout
 
     private final int UNDEFINED_TOUCH_EVENT_ACTION_INDEX = -1;
     private int mActivePointerId = UNDEFINED_TOUCH_EVENT_ACTION_INDEX;
+
+    private static String mOutgoingNumber;
 
     public ComponentPhone(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
@@ -246,16 +249,13 @@ public class ComponentPhone extends ComponentFramework.Layout
                 String incomingNumber = getIncomingNumber();
 
                 if (callState == TelephonyManager.CALL_STATE_OFFHOOK && (incomingNumber == null || incomingNumber.equals(""))) {
-/* doesn't work properly yet
-                    String lastCall = CallLog.Calls.getLastOutgoingCall(getActivity());
-                    if (lastCall != null && !lastCall.equals("")) {
-                        Log_d(LOG_TAG, "getIncomingNumber: using getLastOutgoingCall() -> " + lastCall);
+                    if (mOutgoingNumber != null && !mOutgoingNumber.equals("")) {
+                        Log_d(LOG_TAG, "getIncomingNumber: using outgoingNumber() -> " + mOutgoingNumber);
 
-                        incomingNumber = lastCall;
+                        incomingNumber = mOutgoingNumber;
                         // no text to speech
                         setPhoneTtsNotified(true);
                     }
-*/
                 }
 
                 Log_d(LOG_TAG, "initPhoneWidget: number = '" + incomingNumber + "'");
@@ -717,6 +717,19 @@ public class ComponentPhone extends ComponentFramework.Layout
         @Override
         public void onCallForwardingIndicatorChanged (boolean callForwardingIndicator) {
             Log_d(LOG_TAG, "onCallForwardingIndicatorChanged: " + callForwardingIndicator);
+        }
+    }
+
+    public static class OutgoingCallReceiver extends BroadcastReceiver {
+        private static final String LOG_TAG = "OutgoingCallReceiver";
+
+        public OutgoingCallReceiver() {
+            super();
+        }
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            mOutgoingNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER);
         }
     }
 
