@@ -36,5 +36,20 @@
 	            android:name="resource"
 	            android:value="preferences_phone" />
 	    </org.durka.hallmonitor_framework_test.PreferenceSwitchable>
-	    
+
+		<PreferenceScreen
+			android:key="pref_resize_controls"
+			android:title="@string/pref_resize_screen"
+			android:summary="@string/pref_resize_screen_summary">
+			<intent
+				android:action="android.intent.action.VIEW"
+				android:targetPackage="org.durka.hallmonitor_framework_test"
+				android:targetClass="org.durka.hallmonitor_framework_test.ComponentTestActivity">
+				<extra
+					android:name="preview"
+					android:value="resizeWidget"
+				/>
+			</intent>
+		</PreferenceScreen>
+
 </PreferenceScreen>

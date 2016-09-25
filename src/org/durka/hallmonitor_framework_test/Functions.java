@@ -96,7 +96,7 @@ public class Functions {
                         ,   "echo clear_cover_mode,3 > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result"}
                         );
                     } else // others devices
-                        run_commands_as_root(new String[]{"echo clear_cover_mode,1 > /sys/class/sec/tsp/cmd"});
+                        run_commands_as_root(new String[]{"echo clear_cover_mode,1 > /sys/class/sec/tsp/cmd && cat /sys/class/sec/tsp/cmd_result"});
 
                     Log_d(LOG_TAG + ".setTouchScreenCoverMode", "...Sensitivity boosted, hold onto your hats!");
                 } else {

@@ -77,7 +77,9 @@
     <string name="pref_gyroscope_enabled_summary">use this option, if not provided by operating system by default</string>
     <string name="pref_phone_preview_summary">Enter a number and verify your setup.</string>
     <string name="pref_phone_preview_input_message">enter a number</string>
-    
+    <string name="pref_resize_screen">Size &amp; Position</string>
+    <string name="pref_resize_screen_summary">open preview</string>
+
     <string name="pref_flash_controls">Torch Controls</string>
     <string name="pref_flash_controls_summary">Whether to include a button to turn the torch on and off on the lock screen</string>
     <string name="pref_camera_controls">Camera Controls</string>
@@ -109,6 +111,8 @@
     <string name="caller_name">Caller Name</string>
     <string name="caller_number">+49 30 1234 5678</string>
     <string name="unknown_caller">unknown caller</string>
+    <string name="instruction_name">close cover</string>
+    <string name="instruction_arrange">slide and zoom to arrange view</string>
     <!-- constants for intents -->
     <string name="ACTION_SEND_TO_SPEECH_RECEIVE">org.durka.hallmonitor.sendTextToSpeech</string>
     <string name="ACTION_STOP_TO_SPEECH_RECEIVE">org.durka.hallmonitor.stopTextToSpeech</string>

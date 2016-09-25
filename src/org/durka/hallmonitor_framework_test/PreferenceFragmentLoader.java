@@ -43,7 +43,7 @@ import java.io.File;
 import java.lang.annotation.Target;
 
 public class PreferenceFragmentLoader extends PreferenceFragment  implements SharedPreferences.OnSharedPreferenceChangeListener {
-    private final String LOG_TAG = "PreferenceFragmentLoader";
+    private final String LOG_TAG = "PreferenceFragmentLoade";
 
     private boolean mDebug = false;
     private int mAboutClicked = 0;
@@ -119,6 +119,8 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
         // phone control
         enablePhoneScreen(prefs);
         updatePhoneControlTtsDelay(prefs);
+        // resize control
+        enableResizeScreen(prefs);
     }
 
     @Override
@@ -175,6 +177,8 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
         enablePhoneScreen(prefs);
         updatePhoneControlTtsDelay(prefs);
         updateDefaultView(prefs);
+        // resize control
+        enableResizeScreen(prefs);
     }
 
     @Override
@@ -273,6 +277,8 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
 
         // phone control
         enablePhoneScreen(prefs);
+        // resize control
+        enableResizeScreen(prefs);
     }
 
     private void updatePhoneControlTtsDelay(SharedPreferences prefs) {
@@ -300,6 +306,14 @@ public class PreferenceFragmentLoader extends PreferenceFragment  implements Sha
             phoneControl.setEnabled(phoneControlState);
         if (phoneControlConfig != (phoneControlState && prefs.getBoolean("pref_phone_controls_user", false)))
             prefs.edit().putBoolean("pref_phone_controls", !phoneControlConfig).commit();
+    }
+
+    private void enableResizeScreen(SharedPreferences prefs) {
+        boolean resizeControlState = prefs.getBoolean("pref_enabled", false) && prefs.getBoolean("pref_runasroot", false);
+        Preference resizeControl = findPreference("pref_resize_controls");
+
+        if (resizeControl != null)
+            resizeControl.setEnabled(resizeControlState);
     }
 
     private void enableLogcat(SharedPreferences prefs) {

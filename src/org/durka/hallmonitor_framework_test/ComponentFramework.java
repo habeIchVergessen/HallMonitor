@@ -53,6 +53,10 @@ public class ComponentFramework {
         public void onStop();
     }
 
+    public interface OnResizeListener {
+        public void onResize(float scale, int offset);
+    }
+
     public interface OnScreenOffTimerListener {
         public boolean onStartScreenOffTimer();
         public boolean onStopScreenOffTimer();
@@ -370,6 +374,13 @@ public class ComponentFramework {
             return PreferenceManager.getDefaultSharedPreferences(getContext()).getInt(prefName, defaultValue);
         }
 
+        protected float getPrefFloat(String prefName, float defaultValue) {
+            if (isInEditMode())
+                return defaultValue;
+
+            return PreferenceManager.getDefaultSharedPreferences(getContext()).getFloat(prefName, defaultValue);
+        }
+
         protected boolean getPrefBoolean(String prefName, boolean defaultValue) {
             if (isInEditMode())
                 return defaultValue;
@@ -398,7 +409,7 @@ public class ComponentFramework {
 
     }
 
-    public static class Container extends Child implements OnPauseResumeListener, OnStopListener, MenuController.OnMenuOpenListener {
+    public static class Container extends Child implements OnPauseResumeListener, OnStopListener, OnResizeListener, MenuController.OnMenuOpenListener {
 
         private final String LOG_TAG = "ComponentFramework.Container";
 
@@ -695,6 +706,9 @@ public class ComponentFramework {
 
             setDebugMode(getPrefBoolean("pref_dev_opts_debug", false));
 
+            // read current values
+            onResize(getPrefFloat("pref_resize_controls_scale", 1.0f), getPrefInt("pref_resize_controls_offset", 0));
+
             // create temp. list
             HashSet<View> childs = new HashSet<View>();
             for (int idx=getChildCount() - 1; idx >=0; idx--)
@@ -755,6 +769,23 @@ public class ComponentFramework {
                 if ((getChildAt(idx) instanceof Layout)  && OnStopListener.class.isAssignableFrom(getChildAt(idx).getClass()))
                     ((OnStopListener)getChildAt(idx)).onStop();
             }
+        }
+
+        public void onResize(float scale, int offset) {
+            Log_d(LOG_TAG, "onResize: scale=" + scale + ", offset=" + offset);
+
+            RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams)getLayoutParams();
+
+            if (layoutParams != null) {
+                layoutParams.width = Math.round(getResources().getDimension(R.dimen.container_width) * scale);
+                layoutParams.height = Math.round(getResources().getDimension(R.dimen.container_height) * scale);
+                layoutParams.setMargins(0, getResources().getDimensionPixelSize(R.dimen.container_margin_top) + offset, 0, 0);
+
+                setLayoutParams(layoutParams);
+
+                invalidate();
+            } else
+                Log_d(LOG_TAG, "onResize: invalid layout");
         }
 
         public MenuController.OnMenuActionListener onMenuOpen() {
@@ -1716,5 +1747,5 @@ public class ComponentFramework {
             super(context, attributeSet);
         }
     }
-
+    
 }

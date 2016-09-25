@@ -16,6 +16,9 @@
     <!-- menu -->
     <item type="id" name="componentMenu" />
 
+    <!-- resize -->
+    <item type="id" name="componentResize" />
+
     <!-- id's used by dynamically generated view inside ComponentMenu -->
     <item type="id" name="option_overlay_menu"/>
     <item type="id" name="option_overlay_menu_button"/>
