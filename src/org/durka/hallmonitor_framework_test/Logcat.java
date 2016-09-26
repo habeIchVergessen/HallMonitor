@@ -7,6 +7,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.media.MediaScannerConnection;
 import android.os.Build;
+import android.os.Environment;
 import android.preference.Preference;
 import android.util.Log;
 
@@ -63,11 +64,9 @@ public class Logcat {
 
         ArrayList<String> log = getOutput();
 
-        // TODO: get path from env (not working yet for cyanogenmod)
-        String outDirName = "/storage/sdcard0/Download";
         File outFile = null;
         try {
-            File outDir = new File(outDirName);
+            File outDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
 
             if (!outDir.getParentFile().isDirectory()) {
                 Log.e("Logcat", "writeOutput: directory doesn't exists! '" + outDir.getAbsolutePath() + "'");
@@ -115,7 +114,7 @@ public class Logcat {
 
             mOutputName = outFile.getAbsolutePath();
         } catch (Exception e) {
-            Log.e("Logcat", "writeOutput: exception occurred: '" + outDirName + File.pathSeparator + mOutputName + "', " + e.getMessage());
+            Log.e("Logcat", "writeOutput: exception occurred: '$Environment.DIRECTORY_DOWNLOADS" + File.pathSeparator + mOutputName + "', " + e.getMessage());
             return null;
         }
 

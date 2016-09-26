@@ -5,8 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_gravity="center_horizontal"
-    android:columnCount="1"
-    android:rowCount="1"
+    android:columnCount="3"
+    android:rowCount="3"
     android:columnOrderPreserved="true"
     android:background="#CC000000"
     android:clickable="false"
@@ -18,6 +18,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_column="0"
+        android:layout_columnSpan="3"
         android:layout_row="0"
         android:layout_marginTop="20dp"
         android:gravity="center_horizontal"
@@ -27,5 +28,17 @@
         android:textStyle="bold"
         android:clickable="false"
         android:focusable="false" />
+
+    <Button
+        android:text="@string/resize_reset_to_defaults"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/resize_defaults"
+        android:layout_column="2"
+        android:layout_row="1"
+        android:layout_marginTop="5dp"
+        android:layout_gravity="center"
+        android:visibility="invisible"
+        android:textColor="#FFFFFF" />
 
 </GridLayout>

@@ -113,6 +113,8 @@
     <string name="unknown_caller">unknown caller</string>
     <string name="instruction_name">close cover</string>
     <string name="instruction_arrange">slide and zoom to arrange view</string>
+    <string name="resize_reset_to_defaults">reset to defaults</string>
+
     <!-- constants for intents -->
     <string name="ACTION_SEND_TO_SPEECH_RECEIVE">org.durka.hallmonitor.sendTextToSpeech</string>
     <string name="ACTION_STOP_TO_SPEECH_RECEIVE">org.durka.hallmonitor.stopTextToSpeech</string>

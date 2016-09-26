@@ -15,6 +15,7 @@ import android.preference.PreferenceManager;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.view.View;
 import android.widget.TextView;
 
 public class ComponentResize extends ComponentFramework.Layout
@@ -31,8 +32,10 @@ public class ComponentResize extends ComponentFramework.Layout
     private int mBackgroundColor = 0xCC000000;
 
     private ScaleGestureDetector mScaleDetector;
-    private float mScaleFactor = 1.f;
-    private int mOffset = 0;
+    private float mScaleFactorDefault = 1.f;
+    private float mScaleFactor = mScaleFactorDefault;
+    private int mOffsetDefault = 0;
+    private int mOffset = mOffsetDefault;
     private int downY;
 
     public ComponentResize(Context context, AttributeSet attributeSet) {
@@ -60,8 +63,8 @@ public class ComponentResize extends ComponentFramework.Layout
             preview();
 
         // read current values
-        mScaleFactor = getPrefFloat("pref_resize_controls_scale", 1.0f);
-        mOffset = getPrefInt("pref_resize_controls_offset", 0);
+        mScaleFactor = getPrefFloat("pref_resize_controls_scale", mScaleFactorDefault);
+        mOffset = getPrefInt("pref_resize_controls_offset", mOffsetDefault);
 
         ViewCoverService.registerOnCoverStateChangedListener(this);
 
@@ -73,14 +76,25 @@ public class ComponentResize extends ComponentFramework.Layout
 
         ViewCoverService.unregisterOnCoverStateChangedListener(this);
 
-        // save settings
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
-        prefs.edit().putFloat("pref_resize_controls_scale", mScaleFactor).commit();
-        prefs.edit().putInt("pref_resize_controls_offset", mOffset).commit();
+        writeValues(mScaleFactor, mOffset);
 
         if (mPreviewMode) {
             getActivity().finish();
         }
+    }
+
+    private void writeValues(float scale, int offset) {
+        // save settings
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        prefs.edit().putFloat("pref_resize_controls_scale", scale).commit();
+        prefs.edit().putInt("pref_resize_controls_offset", offset).commit();
+    }
+
+    public void resetToDefaults(View button) {
+        mScaleFactor = mScaleFactorDefault;
+        mOffset = mOffsetDefault;
+
+        getActivity().getContainer().onResize(mScaleFactor, mOffset);
     }
 
     /**
@@ -99,6 +113,16 @@ public class ComponentResize extends ComponentFramework.Layout
                     try {
                         textView.setText(getResources().getText(R.string.instruction_arrange));
                         createBackground();
+
+                        View resizeDefaults = findViewById(R.id.resize_defaults);
+                        if (resizeDefaults != null) {
+                            resizeDefaults.setVisibility(VISIBLE);
+                            resizeDefaults.setOnClickListener(new View.OnClickListener(){
+                                @Override
+                                public void onClick(View v) {
+                                    resetToDefaults(v);
+                                }
+                            });                        }
                     } catch (Exception e) {
                         Log_d(LOG_TAG, "onCoverStateChanged: exception occurred! " + e.getMessage());
                     }
@@ -200,6 +224,9 @@ public class ComponentResize extends ComponentFramework.Layout
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (super.onTouchEvent(event))
+            return true;
+
         if (event.getPointerCount() == 1) {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
