@@ -19,7 +19,7 @@ import android.view.View;
 import android.widget.TextView;
 
 public class ComponentResize extends ComponentFramework.Layout
-        implements ComponentFramework.OnPreviewComponentListener, ComponentFramework.OnCoverStateChangedListener {
+        implements ComponentFramework.OnPreviewComponentListener, ComponentFramework.OnCoverStateChangedListener, ComponentFramework.MenuController.OnMenuActionListener {
 
     private final String LOG_TAG = "ComponentResize";
 
@@ -36,6 +36,9 @@ public class ComponentResize extends ComponentFramework.Layout
     private float mScaleFactor = mScaleFactorDefault;
     private int mOffsetDefault = 0;
     private int mOffset = mOffsetDefault;
+    private boolean mSquareDefault = false;
+    private boolean mSquare = mSquareDefault;
+
     private int downY;
 
     public ComponentResize(Context context, AttributeSet attributeSet) {
@@ -65,6 +68,7 @@ public class ComponentResize extends ComponentFramework.Layout
         // read current values
         mScaleFactor = getPrefFloat("pref_resize_controls_scale", mScaleFactorDefault);
         mOffset = getPrefInt("pref_resize_controls_offset", mOffsetDefault);
+        mSquare = getPrefBoolean("pref_resize_controls_square", mSquareDefault);
 
         ViewCoverService.registerOnCoverStateChangedListener(this);
 
@@ -76,25 +80,27 @@ public class ComponentResize extends ComponentFramework.Layout
 
         ViewCoverService.unregisterOnCoverStateChangedListener(this);
 
-        writeValues(mScaleFactor, mOffset);
+        writeValues(mScaleFactor, mOffset, mSquare);
 
         if (mPreviewMode) {
             getActivity().finish();
         }
     }
 
-    private void writeValues(float scale, int offset) {
+    private void writeValues(float scale, int offset, boolean square) {
         // save settings
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
         prefs.edit().putFloat("pref_resize_controls_scale", scale).commit();
         prefs.edit().putInt("pref_resize_controls_offset", offset).commit();
+        prefs.edit().putBoolean("pref_resize_controls_square", square).commit();
     }
 
-    public void resetToDefaults(View button) {
+    private void resetToDefaults() {
         mScaleFactor = mScaleFactorDefault;
         mOffset = mOffsetDefault;
+        mSquare = false;
 
-        getActivity().getContainer().onResize(mScaleFactor, mOffset);
+        getActivity().getContainer().onResize(mScaleFactor, mOffset, mSquare);
     }
 
     /**
@@ -113,16 +119,6 @@ public class ComponentResize extends ComponentFramework.Layout
                     try {
                         textView.setText(getResources().getText(R.string.instruction_arrange));
                         createBackground();
-
-                        View resizeDefaults = findViewById(R.id.resize_defaults);
-                        if (resizeDefaults != null) {
-                            resizeDefaults.setVisibility(VISIBLE);
-                            resizeDefaults.setOnClickListener(new View.OnClickListener(){
-                                @Override
-                                public void onClick(View v) {
-                                    resetToDefaults(v);
-                                }
-                            });                        }
                     } catch (Exception e) {
                         Log_d(LOG_TAG, "onCoverStateChanged: exception occurred! " + e.getMessage());
                     }
@@ -134,6 +130,52 @@ public class ComponentResize extends ComponentFramework.Layout
             onCloseComponent();
         }
     }
+
+    public int getMenuId() {
+        return getId();
+    }
+
+    public void onMenuInit(ComponentFramework.MenuController menuController) {
+        Log_d(LOG_TAG, "onMenuInit:");
+
+        menuController.registerMenuOption(getMenuId(), R.id.menu_resize_reset, R.drawable.ic_resize_reset);
+        menuController.registerMenuOption(getMenuId(), R.id.menu_resize_square, R.drawable.ic_resize_square_on);
+    }
+
+    public boolean onMenuOpen(ComponentFramework.MenuController.Menu menu) {
+        Log_d(LOG_TAG, "onMenuOpen: " + menu.getId() + ", " + menu.getOptions().toString());
+
+        for (int optionId : menu.getOptions()) {
+            ComponentFramework.MenuController.Option option = menu.getOption(optionId);
+
+            switch (option.getId()) {
+                case R.id.menu_resize_reset:
+                    option.setEnabled(mScaleFactor != mScaleFactorDefault || mOffset != mOffsetDefault || mSquare != mSquareDefault);
+                    break;
+                case R.id.menu_resize_square:
+                    option.setImageId(mSquare ? R.drawable.ic_resize_square_on : R.drawable.ic_resize_square_off);
+                    break;
+            }
+        }
+        return true;
+    }
+
+    public void onMenuAction(ComponentFramework.MenuController.MenuOption menuOption) {
+        Log_d(LOG_TAG, "onMenuAction: " + menuOption.getOptionId());
+
+        switch (menuOption.getOptionId()) {
+            case R.id.menu_resize_reset:
+                resetToDefaults();
+                break;
+            case R.id.menu_resize_square:
+                mSquare = !mSquare;
+
+                // update layout
+                getActivity().getContainer().onResize(mScaleFactor, mOffset, mSquare);
+                break;
+        }
+    }
+
 
     /**
      * implement OnPreviewComponentListener
@@ -238,7 +280,7 @@ public class ComponentResize extends ComponentFramework.Layout
                     if (deltaY != mOffset) {
                         Log_d(LOG_TAG, "onTouchEvent: offset=" + deltaY);
                         mOffset = deltaY;
-                        getActivity().getContainer().onResize(mScaleFactor, mOffset);
+                        getActivity().getContainer().onResize(mScaleFactor, mOffset, mSquare);
                     }
                     break;
             }
@@ -255,7 +297,7 @@ public class ComponentResize extends ComponentFramework.Layout
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
             // Don't let the object get too small or too large.
-            float scaleFactor = Math.round(Math.max(1f, Math.min(mScaleFactor * detector.getScaleFactor(), 1.5f)) * 100) / 100f;
+            float scaleFactor = Math.round(Math.max((mSquare ? 0.75f : 1f), Math.min(mScaleFactor * detector.getScaleFactor(), 1.5f)) * 100) / 100f;
 
             if (scaleFactor != mScaleFactor) {
                 Log_d(LOG_TAG, "ScaleListener.onScale: scale=" + scaleFactor + " (" + detector.getScaleFactor() + ")");
@@ -263,7 +305,7 @@ public class ComponentResize extends ComponentFramework.Layout
                 mScaleFactor = scaleFactor;
 
                 // update layout
-                getActivity().getContainer().onResize(mScaleFactor, mOffset);
+                getActivity().getContainer().onResize(mScaleFactor, mOffset, mSquare);
             }
             return true;
         }

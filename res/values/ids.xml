@@ -31,6 +31,10 @@
     <item type="id" name="menu_phone_speaker"/>
     <item type="id" name="menu_phone_mic"/>
 
-    <item type="id" name="menu_test" />
+    <item type="id" name="menu_test"/>
+
+    <!-- id's used by resize -->
+    <item type="id" name="menu_resize_reset"/>
+    <item type="id" name="menu_resize_square"/>
 
 </resources>

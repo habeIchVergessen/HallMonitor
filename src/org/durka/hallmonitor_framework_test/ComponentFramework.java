@@ -54,7 +54,7 @@ public class ComponentFramework {
     }
 
     public interface OnResizeListener {
-        public void onResize(float scale, int offset);
+        public void onResize(float scale, int offset, boolean square);
     }
 
     public interface OnScreenOffTimerListener {
@@ -707,7 +707,7 @@ public class ComponentFramework {
             setDebugMode(getPrefBoolean("pref_dev_opts_debug", false));
 
             // read current values
-            onResize(getPrefFloat("pref_resize_controls_scale", 1.0f), getPrefInt("pref_resize_controls_offset", 0));
+            onResize(getPrefFloat("pref_resize_controls_scale", 1.0f), getPrefInt("pref_resize_controls_offset", 0), getPrefBoolean("pref_resize_controls_square", false));
 
             // create temp. list
             HashSet<View> childs = new HashSet<View>();
@@ -771,14 +771,14 @@ public class ComponentFramework {
             }
         }
 
-        public void onResize(float scale, int offset) {
+        public void onResize(float scale, int offset, boolean square) {
             Log_d(LOG_TAG, "onResize: scale=" + scale + ", offset=" + offset);
 
             RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams)getLayoutParams();
 
             if (layoutParams != null) {
                 layoutParams.width = Math.round(getResources().getDimension(R.dimen.container_width) * scale);
-                layoutParams.height = Math.round(getResources().getDimension(R.dimen.container_height) * scale);
+                layoutParams.height = (!square ? Math.round(getResources().getDimension(R.dimen.container_height) * scale) : layoutParams.width);
                 layoutParams.setMargins(0, getResources().getDimensionPixelSize(R.dimen.container_margin_top) + offset, 0, 0);
 
                 setLayoutParams(layoutParams);
