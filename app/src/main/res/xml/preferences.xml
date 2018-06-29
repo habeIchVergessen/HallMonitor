@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  Copyright 2013 Alex Burka
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+ 
+      http://www.apache.org/licenses/LICENSE-2.0
+ 
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+                  xmlns:robobunny="http://robobunny.com" >
+    
+    <org.durka.hallmonitor_framework_test.PreferenceSwitchable
+        android:key="pref_enabled"
+        android:title="@string/pref_enabled"
+        android:summary="@string/pref_enabled_summary"
+        android:fragment="org.durka.hallmonitor_framework_test.PreferenceFragmentLoader"
+        android:defaultValue="false">
+        <extra
+            android:name="resource"
+            android:value="preferences_general" />
+    </org.durka.hallmonitor_framework_test.PreferenceSwitchable>
+    
+    <org.durka.hallmonitor_framework_test.PreferenceSwitchable
+        android:key="pref_runasroot"
+        android:title="@string/pref_runasroot"
+        android:summary="@string/pref_runasroot_summary"
+        android:defaultValue="false" />
+    
+    <CheckBoxPreference
+        android:key="pref_default_widget"
+        android:title="@string/pref_default_widget"
+        android:summary="@string/pref_default_widget_summary"
+        android:defaultValue="false"
+        android:disableDependentsState="true" />
+    
+    <CheckBoxPreference
+        android:key="pref_do_notifications"
+        android:title="When closed: notifications"
+        android:summary="TODO"
+        android:defaultValue="false" />
+    
+    <CheckBoxPreference
+        android:key="pref_flash_controls"
+        android:title="@string/pref_flash_controls"
+        android:summary="@string/pref_flash_controls_summary"
+        android:defaultValue="false" />
+    
+    <CheckBoxPreference
+        android:key="pref_camera_controls"
+        android:title="@string/pref_camera_controls"
+        android:summary="@string/pref_camera_controls_summary"
+        android:defaultValue="false" />
+
+    <CheckBoxPreference
+        android:key="pref_media_widget"
+        android:title="@string/pref_media_widget"
+        android:summary="@string/pref_media_widget_summary"
+        android:defaultValue="false" />
+    
+    <CheckBoxPreference
+        android:key="pref_alarm_controls"
+        android:title="@string/pref_alarm_controls"
+        android:summary="@string/pref_alarm_controls_summary"
+        android:defaultValue="false" />
+
+    <org.durka.hallmonitor_framework_test.PreferenceSwitchable
+        android:key="pref_phone_controls_user"
+        android:title="@string/pref_phone_screen"
+        android:summary="@string/pref_phone_screen_summary"
+        android:fragment="org.durka.hallmonitor_framework_test.PreferenceFragmentLoader"
+        android:defaultValue="false">
+        <extra
+            android:name="resource"
+            android:value="preferences_phone" />
+    </org.durka.hallmonitor_framework_test.PreferenceSwitchable>
+
+    <!-- spacer -->
+    <Preference
+        android:title=""
+        android:summary=""
+        android:enabled="false" />
+    
+    <Preference
+        android:key="pref_about"
+        android:title="@string/pref_about"
+        android:summary="@string/pref_about_summary"
+        android:enabled="false" />
+
+</PreferenceScreen>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- container -->
+    <view
+        android:layout_width="@dimen/container_width"
+        android:layout_height="@dimen/container_height"
+        android:layout_marginTop="@dimen/container_margin_top"
+        android:id="@+id/componentContainer"
+        class="org.durka.hallmonitor_framework_test.ComponentFramework$Container"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        app:defaultLayoutClassName="ComponentDefaultDurka">
+
+        <!-- phone -->
+        <view
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/componentPhone"
+            class="org.durka.hallmonitor_framework_test.ComponentPhone"
+        />
+
+        <!-- camera -->
+        <view
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/componentCamera"
+            class="org.durka.hallmonitor_framework_test.ComponentCamera"
+        />
+
+        <!-- resize -->
+        <view
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/componentResize"
+            class="org.durka.hallmonitor_framework_test.ComponentResize"
+        />
+
+    </view>
+
+    <!-- menu -->
+    <view
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/option_overlay_menu"
+        android:layout_below="@+id/componentContainer"
+        android:layout_centerHorizontal="true"
+        android:background="#ff000000"
+        class="org.durka.hallmonitor_framework_test.ComponentFramework$MenuController"
+        app:overlayLayout="@+id/componentContainer"
+    />
+
+</RelativeLayout>

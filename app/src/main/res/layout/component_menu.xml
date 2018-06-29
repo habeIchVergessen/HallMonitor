@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- option widget
+- inflated by constructor of OptionOverlay
+- don't edit OptionOverlay.xml (!!! needs to be configured at runtime !!!)
+-->
+
+<view
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/option_overlay"
+    class="org.durka.hallmonitor_framework_test.ComponentFramework$MenuLayout"
+    android:background="#CC000000">
+
+    <!-- option 1 -->
+    <ImageView
+        android:layout_width="@dimen/menu_button_size"
+        android:layout_height="@dimen/menu_button_size"
+        android:id="@+id/option_01"
+        android:src="@drawable/ic_option_overlay_option1"
+        android:focusable="false"
+        android:clickable="false"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="35dp" />
+
+    <!-- wrapper option 2 + 3 -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:clickable="false"
+        android:focusable="false" >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:id="@+id/spacer_2_3"
+            android:paddingLeft="26dp"
+            android:paddingRight="26dp"
+            android:clickable="false"
+            android:focusable="false" />
+
+        <ImageView
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
+            android:id="@+id/option_02"
+            android:src="@drawable/ic_option_overlay_option2"
+            android:focusable="false"
+            android:clickable="false"
+            android:layout_toRightOf="@+id/spacer_2_3" />
+
+        <ImageView
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
+            android:id="@+id/option_03"
+            android:src="@drawable/ic_option_overlay_option3"
+            android:focusable="false"
+            android:clickable="false"
+            android:layout_toLeftOf="@+id/spacer_2_3" />
+    </RelativeLayout>
+
+    <!-- wrapper option 4 + 5 -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="75dp"
+        android:clickable="false"
+        android:focusable="false" >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:id="@+id/spacer_4_5"
+            android:paddingRight="63dp"
+            android:paddingLeft="63dp"
+            android:clickable="false"
+            android:focusable="false" />
+
+        <ImageView
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
+            android:id="@+id/option_04"
+            android:src="@drawable/ic_option_overlay_option4"
+            android:focusable="false"
+            android:clickable="false"
+            android:layout_toRightOf="@+id/spacer_4_5" />
+
+        <ImageView
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
+            android:id="@+id/option_05"
+            android:src="@drawable/ic_option_overlay_option5"
+            android:focusable="false"
+            android:clickable="false"
+            android:layout_toLeftOf="@+id/spacer_4_5" />
+
+    </RelativeLayout>
+
+    <!-- wrapper option 6 + 7 -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="0dp"
+        android:clickable="false"
+        android:focusable="false" >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/spacer_6_7"
+            android:paddingRight="5dp"
+            android:paddingLeft="5dp"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:clickable="false"
+            android:focusable="false" />
+
+        <ImageView
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
+            android:id="@+id/option_06"
+            android:src="@drawable/ic_option_overlay_option6"
+            android:focusable="false"
+            android:clickable="false"
+            android:layout_toRightOf="@+id/spacer_6_7" />
+
+        <ImageView
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
+            android:id="@+id/option_07"
+            android:src="@drawable/ic_option_overlay_option7"
+            android:focusable="false"
+            android:clickable="false"
+            android:layout_toLeftOf="@+id/spacer_6_7" />
+
+    </RelativeLayout>
+
+    <!-- wrapper option 8 + 9 -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:clickable="false"
+        android:focusable="false" >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/spacer_8_9"
+            android:paddingRight="60dp"
+            android:paddingLeft="60dp"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:clickable="false"
+            android:focusable="false" />
+
+        <ImageView
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
+            android:id="@+id/option_08"
+            android:src="@drawable/ic_option_overlay_option8"
+            android:focusable="false"
+            android:clickable="false"
+            android:layout_toRightOf="@+id/spacer_8_9" />
+
+        <ImageView
+            android:layout_width="@dimen/menu_button_size"
+            android:layout_height="@dimen/menu_button_size"
+            android:id="@+id/option_09"
+            android:src="@drawable/ic_option_overlay_option9"
+            android:focusable="false"
+            android:clickable="false"
+            android:layout_toLeftOf="@+id/spacer_8_9" />
+
+    </RelativeLayout>
+
+</view>

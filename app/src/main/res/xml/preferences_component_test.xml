@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  Copyright 2013 Alex Burka
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+ 
+      http://www.apache.org/licenses/LICENSE-2.0
+ 
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <org.durka.hallmonitor_framework_test.PreferenceSwitchable
+        android:key="pref_enabled"
+        android:title="@string/pref_enabled"
+        android:summary="@string/pref_enabled_summary"
+        android:fragment="org.durka.hallmonitor_framework_test.PreferenceFragmentLoader"
+        android:defaultValue="false">
+        <extra
+            android:name="resource"
+            android:value="preferences_general" />
+        <extra
+            android:name="title"
+            android:value="@string/pref_enabled_title" />
+    </org.durka.hallmonitor_framework_test.PreferenceSwitchable>
+
+    <org.durka.hallmonitor_framework_test.PreferenceSwitchable
+        android:key="pref_runasroot"
+        android:title="@string/pref_runasroot"
+        android:summary="@string/pref_runasroot_summary"
+        android:defaultValue="false" />
+
+    <PreferenceScreen
+        android:title="@string/pref_widgets"
+        android:summary="@string/pref_widgets_summary"
+        android:dependency="pref_enabled"
+        android:fragment="org.durka.hallmonitor_framework_test.PreferenceFragmentLoader">
+
+        <extra
+            android:name="resource"
+            android:value="preferences_widgets" />
+        <extra
+            android:name="title"
+            android:value="@string/pref_optional" />
+
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:title="@string/pref_optional"
+        android:summary="@string/pref_optional_summary"
+        android:dependency="pref_enabled"
+        android:fragment="org.durka.hallmonitor_framework_test.PreferenceFragmentLoader">
+        <extra
+            android:name="resource"
+            android:value="preferences_features" />
+        <extra
+            android:name="title"
+            android:value="@string/pref_optional" />
+    </PreferenceScreen>
+
+    <PreferenceCategory
+        android:title="@string/pref_settings">
+        <ListPreference
+            android:key="prefDefaultLayoutClassName"
+            android:title="DefaultLayout"
+            android:entries="@array/defaultLayoutNames"
+            android:entryValues="@array/defaultLayoutValues"
+            android:defaultValue=""
+            android:selectable="true"/>
+    </PreferenceCategory>
+
+
+    <PreferenceCategory
+        android:title="@string/pref_test">
+        <Preference
+            android:title="@string/pref_preview"
+            android:summary="select layout above and start preview">
+            <intent
+                android:action="org.durka.hallmonitor.restartFrameworkTest"
+                android:targetPackage="org.durka.hallmonitor_framework_test"
+                android:targetClass="org.durka.hallmonitor_framework_test.ComponentTestActivity">
+<!--
+                <extra
+                    android:name="preview"
+                    android:value="*"
+                />
+-->
+            </intent>
+        </Preference>
+    </PreferenceCategory>
+
+    <!-- spacer -->
+    <Preference
+        android:title=""
+        android:summary=""
+        android:enabled="false" />
+
+    <Preference
+        android:key="pref_about"
+        android:title="@string/pref_about"
+        android:summary="@string/pref_about_summary"
+        android:enabled="false" />
+
+</PreferenceScreen>

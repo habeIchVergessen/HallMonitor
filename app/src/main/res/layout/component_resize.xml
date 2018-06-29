@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- phone widget -->
+<GridLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="center_horizontal"
+    android:columnCount="1"
+    android:rowCount="1"
+    android:columnOrderPreserved="true"
+    android:background="#CC000000"
+    android:clickable="false"
+    android:focusable="false" >
+
+    <!-- instruction name -->
+    <TextView
+        android:id="@+id/instruction_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_column="0"
+        android:layout_row="0"
+        android:layout_marginTop="20dp"
+        android:gravity="center_horizontal"
+        android:text="@string/instruction_name"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:clickable="false"
+        android:focusable="false" />
+
+</GridLayout>

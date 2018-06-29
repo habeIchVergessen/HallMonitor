@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_hallmonitor" default="compile.module.hallmonitor">
+  <dirname property="module.hallmonitor.basedir" file="${ant.file.module_hallmonitor}"/>
+  
+  <property name="module.jdk.home.hallmonitor" value="${jdk.home.android_api_19_platform}"/>
+  <property name="module.jdk.bin.hallmonitor" value="${jdk.bin.android_api_19_platform}"/>
+  <property name="module.jdk.classpath.hallmonitor" value="jdk.classpath.android_api_19_platform"/>
+  
+  <property name="compiler.args.hallmonitor" value="-encoding UTF-8 -source 1.6 ${compiler.args}"/>
+  
+  <property name="hallmonitor.output.dir" value="${module.hallmonitor.basedir}/build/classes/production/HallMonitor"/>
+  <property name="hallmonitor.testoutput.dir" value="${module.hallmonitor.basedir}/build/classes/test/HallMonitor"/>
+  
+  <path id="hallmonitor.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="hallmonitor.module.production.classpath">
+    <path refid="${module.jdk.classpath.hallmonitor}"/>
+  </path>
+  
+  <path id="hallmonitor.runtime.production.module.classpath">
+    <pathelement location="${hallmonitor.output.dir}"/>
+  </path>
+  
+  <path id="hallmonitor.module.classpath">
+    <path refid="${module.jdk.classpath.hallmonitor}"/>
+    <pathelement location="${hallmonitor.output.dir}"/>
+  </path>
+  
+  <path id="hallmonitor.runtime.module.classpath">
+    <pathelement location="${hallmonitor.testoutput.dir}"/>
+    <pathelement location="${hallmonitor.output.dir}"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.hallmonitor">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.hallmonitor">
+    <patternset refid="excluded.from.module.hallmonitor"/>
+  </patternset>
+  
+  <path id="hallmonitor.module.sourcepath">
+    <dirset dir="${module.hallmonitor.basedir}">
+      <include name="src"/>
+      <include name="gen"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.hallmonitor" depends="compile.module.hallmonitor.production,compile.module.hallmonitor.tests" description="Compile module HallMonitor"/>
+  
+  <target name="compile.module.hallmonitor.production" depends="register.custom.compilers" description="Compile module HallMonitor; production classes">
+    <mkdir dir="${hallmonitor.output.dir}"/>
+    <javac2 destdir="${hallmonitor.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true" executable="${module.jdk.bin.hallmonitor}/javac">
+      <compilerarg line="${compiler.args.hallmonitor}"/>
+      <bootclasspath refid="hallmonitor.module.bootclasspath"/>
+      <classpath refid="hallmonitor.module.production.classpath"/>
+      <src refid="hallmonitor.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.hallmonitor"/>
+    </javac2>
+    
+    <copy todir="${hallmonitor.output.dir}">
+      <fileset dir="${module.hallmonitor.basedir}/src">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+      <fileset dir="${module.hallmonitor.basedir}/gen">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="compile.module.hallmonitor.tests" depends="register.custom.compilers,compile.module.hallmonitor.production" description="compile module HallMonitor; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.hallmonitor" description="cleanup module">
+    <delete dir="${hallmonitor.output.dir}"/>
+    <delete dir="${hallmonitor.testoutput.dir}"/>
+  </target>
+</project>
